@@ -215,6 +215,44 @@ local a,n,t,
       i,j,
       str;
 
+  str:= "";
+
+  # don't use conjugacy in automated tests
+  if AssertionLevel()<2 then
+    # is it conjugate?
+    i:=1;
+    j:=Length(l);
+    while i+1<j and l[i]=-l[j] do
+      i:=i+1;
+      j:=j-1;
+    od;
+    if l[i]<>-l[j] then
+      i:=i-1;
+      j:=j+1;
+    fi;
+    if i>0 then
+      # avoid conjugation with inverse generator -- is longer
+
+      if j<Length(l) or l[Length(l)]>0 then
+        # write as conjugate
+
+        str:=DoNSAW(l{[i+1..j-1]},names,tseed);
+        if i+2<j or l[i+1]<0 then 
+          # multiple symbols or inverse, need parentheses
+          str:=Concatenation("(",str,")");
+        fi;
+        a:=DoNSAW(l{[j..Length(l)]},names,tseed);
+        if j<Length(l) or l[Length(l)]<0 then
+          # multiple symbols or inverse , need parentheses
+          a:=Concatenation("(",a,")");
+        fi;
+        str:=Concatenation(str,"^",a);
+        return str;
+
+      fi;
+    fi;
+  fi;
+
   n:=Length(names);
   if (PRINTWORDPOWERS=true
    or (IsInt(PRINTWORDPOWERS) and Length(l)<PRINTWORDPOWERS)) and
@@ -230,7 +268,6 @@ local a,n,t,
   a[2]:=Concatenation(tseed,a[2]);
 
   i:= 1;
-  str:= "";
   while i <= Length(word) do
     if i>1 then
       Add( str, '*' );
