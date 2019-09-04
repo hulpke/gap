@@ -50,8 +50,8 @@ InstallGlobalFunction( AddGenerator, function ( T )
     gen := TzNewGenerator( T );
 
     # display a message.
+    tietze := T!.tietze;
     if TzOptions(T).printLevel >= 1 then
-        tietze := T!.tietze;
         numgens := tietze[TZ_NUMGENS];
         Print( "#I  now the presentation has ", numgens,
             " generators, the new generator is ", gen, "\n");
@@ -387,6 +387,7 @@ InstallGlobalFunction( PresentationFpGroup, function ( arg )
     # initialize some Tietze options
     TzOptions(T).protected := 0;
     TzOptions(T).printLevel:=printlevel;
+    TzOptions(T).save:=[];
 
     # print the status line.
     if TzOptions(T).printLevel >= 2 then  TzPrintStatus( T, true );  fi;
@@ -1306,9 +1307,9 @@ end );
 # eliminate generators by removing first those that ocur rarely, up to
 # frequency lim
 BindGlobal("TzEliminateRareOcurrences",function(pres,lim)
-local prepare,gens,rels,sel,cnt,i,alde,freq;
+local prepare,tzgens,rels,sel,cnt,i,alde,freq,save;
   prepare:=function()
-  local r,j,idx;
+  local r,j,idx,gens;
     gens:=List(pres!.generators,x->LetterRepAssocWord(x)[1]);
     rels:=pres!.tietze[TZ_RELATORS];
     cnt:=List([1..Maximum(gens)],x->0);
@@ -1333,6 +1334,8 @@ local prepare,gens,rels,sel,cnt,i,alde,freq;
     alde:=Union(alde,sel);
   end;
 
+  save:=TzOptions(pres).save;
+  tzgens:=pres!.tietze[TZ_GENERATORS];
   alde:=[];
   TzSearch(pres);
   if Length(pres!.generators)=0 then return alde;fi;
@@ -1341,8 +1344,9 @@ local prepare,gens,rels,sel,cnt,i,alde,freq;
   while Length(sel)>0 do
     sel:=pres!.generators{sel};
     for i in sel do
-      #Print("elim ",i,"\n");
-      TzEliminateGen(pres,Position(pres!.generators,i));
+      if not i in save then
+        TzEliminateGen(pres,Position(pres!.generators,i));
+      fi;
     od;
     TzHandleLength1Or2Relators(pres);
     TzSearchEqual(pres);
@@ -1687,7 +1691,7 @@ InstallGlobalFunction( TzEliminateGen1, function ( T )
 
     local gen, gens, i,j, invs, ispace, length, lengths, modified, num,
           numgens, numrels, occur, occMultiplicities, occRelNum, occRelNums,
-          occTotals, pos, protected, rel, rels, space, spacelimit, tietze,
+          occTotals, pos, protected, save,rel, rels, space, spacelimit, tietze,
           total, word,k,max,oldlen,bestlen,stoplen,oldrels,changed,olen;
 
     # check the given argument to be a Presentation.
@@ -1697,6 +1701,7 @@ InstallGlobalFunction( TzEliminateGen1, function ( T )
     TzTestInitialSetup(T); # run `1Or2Relators' if not yet done
     tietze := T!.tietze;
     protected := TzOptions(T).protected;
+    save:=TzOptions(T).save;
     spacelimit := Minimum( TzOptions(T).lengthLimit, 2^31 - 1 );
 
     gens := tietze[TZ_GENERATORS];
@@ -1732,7 +1737,10 @@ InstallGlobalFunction( TzEliminateGen1, function ( T )
     num := 0;
     space := 0;
 
+#Print("numgens=",numgens,"\n");
+
     for i in [ protected + 1 .. numgens ] do
+      if not gens[i] in save then
         if IsBound( occMultiplicities[i] ) and occMultiplicities[i] = 1 then
             total := occTotals[i];
             length := lengths[occRelNums[i]];
@@ -1742,11 +1750,13 @@ InstallGlobalFunction( TzEliminateGen1, function ( T )
                 space := ispace;
             fi;
         fi;
+      fi;
     od;
 
     if num > 0 then
-      if tietze[TZ_TOTAL] + space <= spacelimit then
 
+      if tietze[TZ_TOTAL] + space <= spacelimit then
+#Print("elim ",num,": ",save,"\n");
         # if there is a tree of generators and if the generator to be deleted
         # is not the last generator, then delete the tree.
         if num < numgens and IsBound( T!.tree ) then
@@ -2421,7 +2431,7 @@ InstallGlobalFunction( TzHandleLength1Or2Relators, function ( T )
     local absrep2, done, flags, gens, i, idword, invs, length, lengths,
           numgens, numgens1, numrels, pointers, protected, ptr, ptr1, ptr2,
           redunds, rels, rep, rep1, rep2, tietze, tracingImages, tree,
-          treelength, treeNums,topl;
+          treelength, treeNums,topl,save;
 
     topl:=TzOptions(T).printLevel;
     if topl >= 3 then  Print( "#I  handling short relators\n" );  fi;
@@ -2432,6 +2442,7 @@ InstallGlobalFunction( TzHandleLength1Or2Relators, function ( T )
     fi;
     tietze := T!.tietze;
     protected := TzOptions(T).protected;
+    save := TzOptions(T).save;
     tracingImages := IsBound( T!.imagesOldGens );
 
     gens := tietze[TZ_GENERATORS];
@@ -2475,7 +2486,7 @@ InstallGlobalFunction( TzHandleLength1Or2Relators, function ( T )
 
                     # handle a relator of length 1.
                     rep1 := AbsInt( rep1 );
-                    if rep1 > protected then
+                    if rep1 > protected and not gens[rep1] in save then
                         # eliminate generator rep1.
                         invs[numgens1-rep1] := 0;
                         invs[numgens1+rep1] := 0;
@@ -2512,7 +2523,7 @@ InstallGlobalFunction( TzHandleLength1Or2Relators, function ( T )
 
                         # the relator is in fact of length at most 1.
                         rep2 := AbsInt( rep2 );
-                        if rep2 > protected then
+                        if rep2 > protected and not gens[rep2] in save then
                             # eliminate generator rep1.
                             invs[numgens1-rep2] := 0;
                             invs[numgens1+rep2] := 0;
@@ -2550,7 +2561,7 @@ InstallGlobalFunction( TzHandleLength1Or2Relators, function ( T )
                           fi;
 
                           absrep2 := AbsInt( rep2 );
-                          if absrep2 > protected then
+                          if absrep2 > protected and not gens[absrep2] in save then
                              invs[numgens1-rep2] := invs[numgens1+rep1];
                              invs[numgens1+rep2] := rep1;
                              if tree <> 0 then
@@ -3068,6 +3079,7 @@ function(P)
     printLevel := 0,
     saveLimit := 10,
     searchSimultaneous := 20,
+    save:=[],
     protected:=0
   );
 end);

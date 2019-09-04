@@ -1462,6 +1462,12 @@ DeclareGlobalFunction("TzPrintLengths");
 ##    because they explicitly specify the generator to be eliminated.
 ##    The default value of <C>protected</C> is 0.
 ##  </Item>
+##  <Mark><C>save</C>:</Mark>
+##  <Item>
+##    A list of generators of the presentation that will not be eliminated
+##    (and do not need to be in the first positions).
+##    The default value is an empty list.
+##  </Item>
 ##  <Mark><C>eliminationsLimit</C>:</Mark>
 ##  <Item>
 ##    Whenever the elimination phase of the <Ref Func="TzGo"/> command is

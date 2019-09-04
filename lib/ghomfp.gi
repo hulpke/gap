@@ -750,7 +750,7 @@ end);
 InstallOtherMethod(IsomorphismFpGroup,"subgroups of fp group",true,
   [IsSubgroupFpGroup,IsString],0,
 function(u,str)
-local aug,w,p,pres,f,fam,opt;
+local aug,w,p,pres,f,fam,opt,i,j,words,new,genl;
   if HasIsWholeFamily(u) and IsWholeFamily(u) then
     return IdentityMapping(u);
   fi;
@@ -776,7 +776,7 @@ local aug,w,p,pres,f,fam,opt;
   # generators and their images, but will do it ``on the fly'' when
   # rewriting.
   aug:=CopiedAugmentedCosetTable(aug);
-  pres := PresentationAugmentedCosetTable( aug, "y",0# printlevel
+  pres := PresentationAugmentedCosetTable( aug, "y",0 # printlevel
                     ,true) ;# intialize tracking before the `1or2' routine!
   opt:=TzOptions(pres);
 
@@ -799,6 +799,32 @@ local aug,w,p,pres,f,fam,opt;
     opt.generatorsLimit:=ValueOption("generatorsLimit");
   fi;
 
+  words:=ValueOption("words");
+  if words<>fail then
+    w:=[];
+    genl:=ShallowCopy(pres!.generators);
+    for i in words do
+      i:=RewriteWord(aug,UnderlyingElement(i));
+      new:=One(genl[1]);
+      for j in i do
+        if j>0 then
+          new:=new*DecodedTreeEntry(pres!.tree,genl,j);
+        else
+          new:=new/DecodedTreeEntry(pres!.tree,genl,-j);
+        fi;
+      od;
+      Add(w,new);
+    od;
+    new:=[];
+    for i in w do
+      TzSubstitute(pres,i);
+      Add(new,pres!.generators[Length(pres!.generators)]);
+    od;
+    TzOptions(pres).save:=new;
+  else
+    new:=[];
+  fi;
+
   TzOptions(pres).printLevel:=InfoLevel(InfoFpGroup); 
   if ValueOption("cheap")=true then
     TzGo(pres);
@@ -816,7 +842,8 @@ local aug,w,p,pres,f,fam,opt;
         i->MappedWord(i,GeneratorsOfPresentation(pres),GeneratorsOfGroup(f))));
   TrySecondaryImages(aug);
   # generator numbers of the new generators
-  w:=List(TzPreImagesNewGens(pres),
+  w:=TzPreImagesNewGens(pres);
+  w:=List(w{[1..Length(w)-Length(new)]},
           i->aug.treeNumbers[Position(OldGeneratorsOfPresentation(pres),i)]);
 
   # and the corresponding words in the original group
@@ -825,6 +852,7 @@ local aug,w,p,pres,f,fam,opt;
     fam:=ElementsFamily(FamilyObj(u));
     w:=List(w,i->ElementOfFpGroup(fam,i));
   fi;
+  if words<>fail then Append(w,words);fi;
 
   # write the homomorphism in terms of the image's free generators
   # (so preimages are cheap)
