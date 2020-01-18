@@ -375,10 +375,14 @@ local hom, gens, c, ran, r, cen, img, u, orbs,
       bestdeg,deg,baddegree,auo,of,cl,store, offset,claselms,fix,new,
       preproc,postproc;
 
+  baddegree:=0;
   finish:=function(hom)
     SetIsGroupHomomorphism(hom,true);
     SetIsBijective(hom,true);
     SetFilterObj(hom,IsNiceMonomorphism);
+AppendTo("~/autgrpdegrees",
+    "[",Size(g),",",baddegree,",",NrMovedPoints(Image(hom)),
+      ",",Size(Image(hom)),",",IsPermGroup(g),"],\n");
     SetNiceMonomorphism(au,hom);
     SetIsHandledByNiceMonomorphism(au,true);
   end;
