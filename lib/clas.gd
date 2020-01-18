@@ -441,3 +441,6 @@ DeclareGlobalFunction( "RationalClassesSolvableGroup" );
 ##
 
 DeclareGlobalFunction( "CentralizerSizeLimitConsiderFunction" );
+
+# not yet documented, as not generically implemented
+DeclareAttribute("CanonicalConjugacyClassElement",IsConjugacyClassGroupRep);
