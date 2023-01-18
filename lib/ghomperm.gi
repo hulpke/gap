@@ -1340,6 +1340,7 @@ InstallGlobalFunction( StabChainPermGroupToPermGroupGeneralMappingByImages,
       longgens[i] := a * (b ^ conperm);
     od;
     longgroup :=  GroupByGenerators( longgens, One( Source( hom ) ) );
+
     for op  in [ PreImagesRange, ImagesSource ]  do
         if      Tester(op)(hom) and HasIsSolvableGroup( op( hom ) )
            and not IsSolvableGroup( op( hom ) )  then
@@ -1348,6 +1349,7 @@ InstallGlobalFunction( StabChainPermGroupToPermGroupGeneralMappingByImages,
         fi;
     od;
 
+if not (IsBound(options.limit) or IsBound(options.size)) then Error("limit");fi;
     MakeStabChainLong( hom, StabChainOp( longgroup, options ),
            [ 1 .. n ], One( Source( hom ) ), conperminv, hom,
            CoKernelOfMultiplicativeGeneralMapping );
