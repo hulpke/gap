@@ -345,7 +345,9 @@ InstallGlobalFunction( RingByStructureConstants, function( arg )
           names,  # names of the ring generators
           Fam,    # the family of ring elements
           A,      # the ring, result
+          one,    # one, if any
           filter,
+          i,new,
           gens;   # ring generators of `A'
 
     # Check the argument list.
@@ -385,15 +387,6 @@ InstallGlobalFunction( RingByStructureConstants, function( arg )
     # Construct the family of elements of our ring.
     Fam:= NewFamily( "SCRingObjFamily", filter );
 
-#X    # If the elements family of `R' has a uniquely determined zero element,
-#X    # then all coefficients in this family are admissible.
-#X    # Otherwise only coefficients from `R' itself are allowed.
-#X    if Zero( ElementsFamily( FamilyObj( R ) ) ) <> fail then
-#X      SetFilterObj( Fam, IsFamilyOverFullCoefficientsFamily );
-#X    else
-#X      Fam!.coefficientsDomain:= R;
-#X    fi;
-
     Fam!.moduli    := moduli;
     Fam!.sctable   := T;
     Fam!.names     := names;
@@ -408,7 +401,47 @@ InstallGlobalFunction( RingByStructureConstants, function( arg )
     SetZero( Fam, ObjByExtRep( Fam, List( [ 1 .. n ], x -> 0 ) ) );
     gens:= Immutable( List( IdentityMat( n, Integers ),
                             x -> ObjByExtRep( Fam, x ) ) );
-    A:= RingByGenerators( gens );
+
+    # find identity -- stupid method
+    one:=fail;
+    # Try generators first
+    i:=1;
+    while one=fail and i<=Length(gens) do
+      A:=[];
+      new:=gens[i];
+      repeat
+        Add(A,new);
+        new:=new*gens[i];
+      until new in A;
+      if new=gens[i] then
+        new:=A[Length(A)];
+        if ForAll(gens,x->x*new=x and new*x=x) then
+          one:=new;
+        fi;
+      fi;
+      i:=i+1;
+    od;
+
+    if one=fail then
+      if Product(moduli)<100000 then
+        A:=RingByGenerators(gens);
+        A:=Enumerator(A);
+        one:=First(A,x->ForAll(gens,y->y*x=y and x*y=y));
+      else
+        Info(InfoWarning,1,"currently cannot test for ring-with-one property");
+      fi;
+    fi;
+
+    # temporary
+    SetIsUFDFamily(Fam,false);
+
+    if one<>fail then
+      SetOne(Fam,one);
+      A:= RingWithOneByGenerators( gens );
+      SetOne(A,one);
+    else
+      A:= RingByGenerators( gens );
+    fi;
     SetIsWholeFamily(A,true);
 
     if Length(moduli)=0 then
@@ -425,25 +458,6 @@ InstallGlobalFunction( RingByStructureConstants, function( arg )
     Fam!.fullSCRing:= A;
 
     SetRepresentative(A,Zero(A));
-
-    # if there is only 1 generator, the `One' - if any - can be obtained easily
-    if Length(moduli)=1 then
-      n:=ExtRepOfObj(gens[1]^2)[1];
-      if moduli[1]=0 and n=1 then
-        n:=ObjByExtRep(Fam,[1]);
-        SetOne(Fam,n);
-        SetOne(A,n);
-      elif moduli[1]=0 and n=-1 then
-        n:=ObjByExtRep(Fam,[-1]);
-        SetOne(Fam,n);
-        SetOne(A,n);
-      elif moduli[1]>1 and Gcd(n,moduli[1])=1 then
-        n:=1/n mod moduli[1];
-        n:=ObjByExtRep(Fam,[n]);
-        SetOne(Fam,n);
-        SetOne(A,n);
-      fi;
-    fi;
 
     # Return the ring.
     return A;
