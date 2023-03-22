@@ -1151,7 +1151,15 @@ RedispatchOnCondition(Discriminant,true,
 InstallOtherMethod( Value,"Laurent, ring element, and mult. neutral element",
     true, [ IsLaurentPolynomial, IsRingElement, IsRingElement ], 0,
 function( f, x, one )
-local val, i,e;
+local val, i,e,fa;
+  # is the polynomial of larger degree? Should we try factoring?
+  if DegreeOfLaurentPolynomial(f)>100 then
+    fa:=Factors(f);
+    if Length(fa)>1 then
+      return Product(List(Collected(fa),y->Value(y[1],x,one)^y[2]),one);
+    fi;
+  fi;
+
   val:= Zero( one );
   f:= CoefficientsOfLaurentPolynomial( f );
   i:= Length( f[1] );
