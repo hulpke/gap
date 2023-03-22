@@ -344,7 +344,7 @@ local bn,bnf,a,b,c,d,bb,bf,bd,step,x,cnt;
   local p,g;
     p:=Filtered(bn,i->i[1]=dis);
     if p=[] then
-      g:=Value(f,x+dis);
+      g:=Value(f,x+dis:infactor);
       p:=[dis,BombieriNorm(g)];
       Add(bn,p);
       if bb>p[2] then
