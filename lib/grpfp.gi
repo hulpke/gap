@@ -1,3 +1,4 @@
+# gaplint: disable = analyse-lvars
 #############################################################################
 ##
 ##  This file is part of GAP, a system for computational discrete algebra.
