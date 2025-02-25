@@ -2049,10 +2049,20 @@ InstallMethod(MappedWord,"for a straight line program word, and two lists",
   IsElmsCollsX,
   [ IsAssocWord and IsStraightLineProgElm, IsAssocWordCollection, IsList ], 0,
 function(slp,gens,imgs)
-  # evaluate in mapped generators
-  return ResultOfStraightLineProgram(slp![2],List(slp![1].seeds,
-    i->MappedWord(i,gens,imgs)) # images of the roots
-    );
+local seedim,i,p;
+  # evaluate in mapped generators. Note that more generators might be in
+  # seed
+  #ResultOfStraightLineProgram(slp![2],List(slp![1].seeds{[1..Length(gens)]},
+  #  i->MappedWord(i,gens,imgs)) # images of the roots
+
+  seedim:=ListWithIdenticalEntries(Length(slp![1].seeds),One(imgs[1]));
+  for i in [1..Length(gens)] do
+    p:=Position(slp![1].seeds,gens[i]);
+    if p<>fail then
+      seedim[p]:=imgs[i];
+    fi;
+  od;
+  return ResultOfStraightLineProgram(slp![2],seedim);
 end);
 
 #############################################################################
