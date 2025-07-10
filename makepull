@@ -1,0 +1,8 @@
+#/bin/sh
+#usage: makepull name cherry-pick
+
+git fetch --all
+git checkout -b $1 upstream/master
+git cherry-pick $2
+git push -u origin $1
+
