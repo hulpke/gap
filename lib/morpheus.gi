@@ -2732,7 +2732,7 @@ local d,iso,a,b,c,o,s,two,rt,r,z,e,y,re,m,gens,cnt,lim,p,
   if gens=fail then
     Info(InfoMorph,1,"Isomorphism simple: ad-hoc");
     # not found by table or other -- try a 2/something ad-hoc
-    rt:=[2,4..Size(g)];
+    rt:=[2,4..Minimum(Size(g),2^50)];
     gens:=[findElm(g,2,fail,rt)];
     z:=Size(Centralizer(g,gens[1]));
 
@@ -2741,7 +2741,8 @@ local d,iso,a,b,c,o,s,two,rt,r,z,e,y,re,m,gens,cnt,lim,p,
     m:=Maximum(Filtered(Factors(Size(g)),x->x<100));
     cnt:=0;
     repeat
-      gens[2]:=findElm(g,m,fail,[m,2*m..Size(g)]);
+      b:=Minimum(Size(g),2^50);
+      gens[2]:=findElm(g,m,fail,[m,2*m..(b-(b mod m))]);
       if isFull(SubgroupNC(g,gens)) then
         b:=gens;
         y:=Size(Centralizer(g,gens[2]));
@@ -2766,7 +2767,8 @@ local d,iso,a,b,c,o,s,two,rt,r,z,e,y,re,m,gens,cnt,lim,p,
     od;
     gens:=b;
     e:=Order(gens[2]);
-    re:=[e,2*e..Size(g)];
+    y:=Minimum(Size(g),2^50);
+    re:=[e,2*e..(y-(y mod e))];
     y:=Size(Centralizer(g,gens[2]));
   fi;
   Info(InfoMorph,1,"generators ",List(gens,Order));
