@@ -1107,6 +1107,7 @@ InstallMethod( \*, "for two zmodnz matrices",IsIdenticalObj,
               #fi;
             od;
             ZNZVECREDUCE(w,b![RLPOS],m);
+            w:=w*One(r);
             w:=Vector(r,w);
 
             l[i] := w;
