@@ -76,9 +76,9 @@
 ##  for example in order to make sure that one's own &GAP; code does not rely
 ##  on the obsolete variables.
 ##  For that, one can use the <C>-O</C> command line option
-##  (see <Ref Label="Command Line Options"/>) or set the component
+##  (see <Ref Label="Command Line Options"/>) or set the user preference
 ##  <C>ReadObsolete</C> in the file <F>gap.ini</F> to <K>false</K>
-##  (see <Ref Sect="sect:gap.ini"/>). Note that <C>-O</C> command
+##  (see <Ref Sect="sect:gap.ini"/>). Note that the <C>-O</C> command
 ##  line option overrides <C>ReadObsolete</C>.
 ##  <P/>
 ##  (Note that the condition whether the library files with the obsolete
@@ -264,6 +264,36 @@ DeclareObsoleteSynonym( "RadicalGroup", "SolvableRadical" );
 ##  operation.)
 ##
 DeclareSynonym( "MutableCopyMat", MutableCopyMatrix );
+
+
+#############################################################################
+##
+#F  SCRSiftOld( <S>, <g> )
+##
+##  Moved to obsoletes in August 2025.
+##
+##  The function was never documented.
+##  It was a library code version of 'SCRSift', which is a kernel function
+##  (see https://github.com/gap-system/gap/pull/525).
+##  The functions 'SCRSiftOld' and 'SiftedPermutation' do essentially the
+##  same, in particular they return the same results, thus 'SCRSiftOld' is
+##  obsolete.
+##
+DeclareObsoleteSynonym( "SCRSiftOld", "SiftedPermutation" );
+
+
+#############################################################################
+##
+#V  OVERRIDENICE
+##
+##  Moved to obsoletes in August 2025.
+##
+##  Use 'OverrideNice()' instead, in order to take the current value of
+##  'RankFilter( IsHandledByNiceMonomorphism )' into account,
+##  not the initial value of the filter.
+##
+BindGlobal( "OVERRIDENICE", Maximum( NICE_FLAGS,
+               RankFilter( IsMatrixGroup and IsFinite ) ) );
 
 
 #############################################################################

@@ -35,10 +35,10 @@ jobs:
     name: "Validate release scripts"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: "Set up Python"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -68,7 +68,7 @@ jobs:
       gap-build-version: ${{ steps.get-build.outputs.name }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -94,7 +94,7 @@ jobs:
           sudo make install
 
       - name: "Set up Python"
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: "Install some python packages"
@@ -188,7 +188,7 @@ jobs:
       # Download the artifact -- for an actual release, this contains the
       # exact same tarball as was uploaded to the release as an asset
       - name: "Download GAP archive from previous job"
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: gap
 
@@ -199,13 +199,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Clone the Windows installer maker scripts"
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: gap-system/gap-windows
           ref: main
           path: gap-windows
 
-      - uses: gap-actions/setup-cygwin@v1
+      - uses: gap-actions/setup-cygwin@v2
 
       # Currently, the gap-windows/release_gap.sh script wraps the GAP
       # contained in gap-${GAP_VERSION}, and outputs its installer to

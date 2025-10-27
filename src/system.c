@@ -47,7 +47,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <unistd.h>
+#include <unistd.h>     // for sysconf
 
 #include <sys/stat.h>
 
@@ -560,7 +560,11 @@ static void InitSysOpts(void)
     SyStorMin = 16 * sizeof(Obj) * 1024;    // in kB
     SyStorMax = 256 * sizeof(Obj) * 1024;   // in kB
 #ifdef SYS_IS_64_BIT
-  #if defined(HAVE_SYSCONF) && defined(_SC_PAGESIZE) && defined(_SC_PHYS_PAGES)
+  // According to POSIX (at least since POSIX.1-2008) unistd.h always
+  // provides _SC_PAGESIZE. However, _SC_PHYS_PAGES is not defined in POSIX
+  // (up to at least POSIX.1-2024). But it is there (and has been for a long
+  // time) in Linux, macOS, FreeBSD, OpenBSD, so we just use it.
+  #if defined(HAVE_SYSCONF)
     // Set to 3/4 of memory size (in kB), if this is larger
     Int SyStorMaxFromMem =
         (sysconf(_SC_PAGESIZE) * sysconf(_SC_PHYS_PAGES) * 3) / 4 / 1024;
@@ -634,7 +638,10 @@ static void ParseCommandLineOptions(int argc, const char * argv[], int phase)
             buf[0] = options[i].minargs + '0';
             buf[1] = '\0';
             fputs(buf, stderr);
-            fputs(" arguments\n", stderr);
+            if (options[i].minargs == 1)
+                fputs("argument\n", stderr);
+            else
+                fputs("arguments\n", stderr);
             usage();
         }
 

@@ -1037,7 +1037,7 @@ InstallMethod( Order,
   function ( mat )
 
     local dim, F, tracemat, lat, red, det, trace, order, orddet, powdet,
-          ordpowdet, I;
+          ordpowdet;
 
     # Check that the argument is an invertible square matrix.
     dim:= NrRows( mat );
@@ -1106,12 +1106,10 @@ InstallMethod( Order,
     # Now use the theorem (see Morris Newman, Integral Matrices)
     # that `mat' has infinite order if the `2 * order'-th
     # power is not equal to the identity matrix.
-    I:= IdentityMat( dim );
-#T supply better `IsOne' method for matrices, without constructing an object!
     mat:= mat ^ order;
-    if mat = I then
+    if IsOne(mat) then
       return order;
-    elif mat ^ 2 = I then
+    elif IsOne(mat ^ 2) then
       return 2 * order;
     else
       return infinity;
@@ -2389,7 +2387,7 @@ function( mat )
 
     # check if <A> is invertible
     c := CoefficientsOfUnivariatePolynomial(p);
-    if c[1] = Zero(c[1])  then
+    if IsZero(c[1])  then
         Error( "matrix <mat> must be invertible" );
     fi;
 
@@ -3850,16 +3848,16 @@ InstallGlobalFunction( RandomInvertibleMat, function ( arg )
 
     # now construct the random matrix
     mat := [];
-    for i  in [1..m]  do
-        repeat
+    repeat
+        for i  in [1..m]  do
             row := [];
             for k  in [1..m]  do
                 row[k] := Random( rs, R );
             od;
             ConvertToVectorRepNC( row, R );
             mat[i] := row;
-        until NullspaceMat( mat ) = [];
-    od;
+        od;
+    until RankMat( mat ) = m;
 
     # We do *not* call ConvertToMatrixRep here, as that can cause
     # unexpected problems for the user (e.g. if a matrix over GF(2) is

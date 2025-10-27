@@ -1835,7 +1835,7 @@ local  classes,            # classes to be constructed, the result
   List(comms,x->ConvertToVectorRep(x,field));
   space:=List(comms,ShallowCopy);
   TriangulizeMat(space);
-  space:=Filtered(space,i->i<>Zero(i)); # remove spurious columns
+  space:=Filtered(space,i->not IsZero(i)); # remove spurious columns
 
   com:=BaseSteinitzVectors(IdentityMat(n,field),space);
 
@@ -2963,7 +2963,7 @@ end);
 ##
 InstallMethod( CentralizerOp, "TF method:elm",IsCollsElms,
   [ IsGroup and IsFinite and HasFittingFreeLiftSetup,
-  IsMultiplicativeElementWithInverse ], OVERRIDENICE,
+  IsMultiplicativeElementWithInverse ], OverrideNice,
 function( G, e )
 local ffs,c,ind;
   if IsPcGroup(G)
@@ -2991,7 +2991,7 @@ end );
 InstallMethod( CentralizerOp, "TF method:subgroup",IsIdenticalObj,
   [ IsGroup and IsFinite and HasFittingFreeLiftSetup,
   IsGroup and IsFinite and HasGeneratorsOfGroup],
-  2*OVERRIDENICE,
+  {} -> 2*OverrideNice(),
 function( G, S )
 local c,e;
   if IsPermGroup(G) or IsPcGroup(G) then TryNextMethod();fi;
@@ -3011,7 +3011,7 @@ InstallOtherMethod( RepresentativeActionOp, "TF Method on elements",
   [ IsGroup and IsFinite and HasFittingFreeLiftSetup,
         IsMultiplicativeElementWithInverse,
         IsMultiplicativeElementWithInverse, IsFunction ],
-  OVERRIDENICE,
+  OverrideNice,
 function ( G, d, e, act )
 local c;
   if IsPcGroup(G)
@@ -3044,7 +3044,7 @@ end);
 #M  ConjugacyClasses( <G> ) . . . . . . . . . . . . . . . . . . of perm group
 ##
 InstallMethod( ConjugacyClasses, "perm group", true,
-  [ IsPermGroup and IsFinite],OVERRIDENICE,
+  [ IsPermGroup and IsFinite], OverrideNice,
 function( G )
 local cl;
   if IsNaturalSymmetricGroup(G) or IsNaturalAlternatingGroup(G) then
@@ -3073,7 +3073,7 @@ end );
 #M  ConjugacyClasses( <G> ) . . . . . . . . . . . . . . . . . . of perm group
 ##
 InstallMethod( ConjugacyClasses, "TF Method", true,
-  [ IsGroup and IsFinite and CanComputeFittingFree],OVERRIDENICE,
+  [ IsGroup and IsFinite and CanComputeFittingFree ], OverrideNice,
 function(G)
   if IsPermGroup(G) or IsPcGroup(G) then TryNextMethod();fi;
   return ConjugacyClassesViaRadical(G);

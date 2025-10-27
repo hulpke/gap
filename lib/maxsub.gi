@@ -52,7 +52,7 @@ BindGlobal("IsCentralModule",function( G, modu )
     local mats;
     if Length( modu ) > 1 then return false; fi;
     mats := LinearOperationLayer( G, modu );
-    return ForAll( mats, x -> x = x^0 );
+    return ForAll( mats, IsOne );
 end);
 
 #############################################################################
@@ -1015,10 +1015,10 @@ end);
 #F  MaximalSubgroupClassReps(<G>) . . . . TF method
 ##
 InstallMethod(MaximalSubgroupClassReps,"TF method",true,
-  [IsGroup and IsFinite and CanComputeFittingFree],OVERRIDENICE,DoMaxesTF);
+  [IsGroup and IsFinite and CanComputeFittingFree],OverrideNice,DoMaxesTF);
 
 InstallMethod(CalcMaximalSubgroupClassReps,"TF method",true,
-  [IsGroup and IsFinite and CanComputeFittingFree],OVERRIDENICE,
+  [IsGroup and IsFinite and CanComputeFittingFree],OverrideNice,
 function(G)
   return DoMaxesTF(G);
 end);

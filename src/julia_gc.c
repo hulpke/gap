@@ -43,16 +43,6 @@
 #include <julia_gcext.h>
 #include <julia_threads.h>    // for jl_get_ptls_states
 
-#if JULIA_VERSION_MAJOR == 1 && JULIA_VERSION_MINOR == 7
-// workaround issue with Julia 1.7 headers which "forgot" to export this
-// function
-JL_DLLEXPORT void * jl_get_ptls_states(void);
-#endif
-
-#if JULIA_VERSION_MAJOR == 1 && JULIA_VERSION_MINOR >= 10
-#define JULIA_MULTIPLE_GC_THREADS_SUPPORTED
-#endif
-
 
 /****************************************************************************
 **
@@ -195,9 +185,7 @@ static TNumFreeFuncBags TabFreeFuncBags[NUM_TYPES];
 TNumMarkFuncBags TabMarkFuncBags[NUM_TYPES];
 
 static TaskInfoTree * TaskStacks;
-#ifdef JULIA_MULTIPLE_GC_THREADS_SUPPORTED
 static pthread_mutex_t TaskStacksMutex;
-#endif
 
 //
 // global bags
@@ -484,10 +472,8 @@ static void MarkFromList(jl_ptls_t ptls, PtrArray * arr)
 static void
 ScanTaskStack(int rescan, jl_task_t * task, void * start, void * end)
 {
-#ifdef JULIA_MULTIPLE_GC_THREADS_SUPPORTED
     if (jl_n_gcthreads > 1)
         pthread_mutex_lock(&TaskStacksMutex);
-#endif
     TaskInfo   tmp = { task, NULL };
     TaskInfo * taskinfo = TaskInfoTreeFind(TaskStacks, tmp);
     PtrArray * stack;
@@ -501,10 +487,8 @@ ScanTaskStack(int rescan, jl_task_t * task, void * start, void * end)
         stack = tmp.stack;
         TaskInfoTreeInsert(TaskStacks, tmp);
     }
-#ifdef JULIA_MULTIPLE_GC_THREADS_SUPPORTED
     if (jl_n_gcthreads > 1)
         pthread_mutex_unlock(&TaskStacksMutex);
-#endif
     if (rescan) {
         SafeScanTaskStack(stack, start, end);
         // Remove duplicates
@@ -725,7 +709,7 @@ static void JFinalizer(jl_value_t * obj)
         TabFreeFuncBags[tnum]((Bag)&contents);
 }
 
-// helper called directly by GAP.jl (if HAVE_JL_REINIT_FOREIGN_TYPE is on)
+// helper called directly by GAP.jl
 jl_datatype_t * GAP_DeclareGapObj(jl_sym_t *      name,
                                   jl_module_t *   module,
                                   jl_datatype_t * parent)
@@ -734,7 +718,7 @@ jl_datatype_t * GAP_DeclareGapObj(jl_sym_t *      name,
                                0);
 }
 
-// helper called directly by GAP.jl (if HAVE_JL_REINIT_FOREIGN_TYPE is on)
+// helper called directly by GAP.jl
 jl_datatype_t * GAP_DeclareBag(jl_sym_t *      name,
                                jl_module_t *   module,
                                jl_datatype_t * parent,
@@ -744,28 +728,23 @@ jl_datatype_t * GAP_DeclareBag(jl_sym_t *      name,
                                1, large > 0);
 }
 
-#ifdef HAVE_JL_REINIT_FOREIGN_TYPE
-// internal wrapper for jl_boundp to deal with API change in Julia 1.12
-static int gap_jl_boundp(jl_module_t *m, jl_sym_t *var)
-{
-#if JULIA_VERSION_MAJOR == 1 && JULIA_VERSION_MINOR >= 12
-    return jl_boundp(m, var, 1);
-#else
-    return jl_boundp(m, var);
-#endif
-}
-#endif
-
 // Initialize the integration with Julia's garbage collector; in particular,
-// create Julia types for use in our allocations. The types will be stored
-// in the given 'module', and the MPtr type will be a subtype of 'parent'.
-//
-// If 'module' is NULL then 'jl_main_module' is used.
-// If 'parent' is NULL then 'jl_any_type' is used.
+// create Julia types for use in our allocations.
+// If 'defined(USE_GAP_INSIDE_JULIA)' (ie this function gets called from julia):
+// This function assumes that the types have already been declared in the
+// Julia module 'module' (e.g., by GAP_DeclareGapObj and GAP_DeclareBag).
+// In particular, 'module' may not be NULL.
+// If '!defined(USE_GAP_INSIDE_JULIA)' (ie this function gets called from GAP):
+// The types will be stored in the given 'module', or 'jl_main_module' if
+// 'module' is NULL.
 void GAP_InitJuliaMemoryInterface(jl_module_t *   module,
-                                  jl_datatype_t * parent)
+                                  jl_datatype_t * parent /* unused */)
 {
+#if defined(USE_GAP_INSIDE_JULIA)
+    GAP_ASSERT(module != 0);
+#else
     jl_sym_t * name;
+#endif
 
     // HOOK: initialization happens here.
     for (UInt i = 0; i < NUM_TYPES; i++) {
@@ -779,10 +758,8 @@ void GAP_InitJuliaMemoryInterface(jl_module_t *   module,
     jl_init();
 #endif
 
-#ifdef JULIA_MULTIPLE_GC_THREADS_SUPPORTED
     if (jl_n_gcthreads > 1)
         pthread_mutex_init(&TaskStacksMutex, NULL);
-#endif
     TaskStacks = TaskInfoTreeMake();
 
     // These callbacks potentially require access to the Julia
@@ -793,37 +770,26 @@ void GAP_InitJuliaMemoryInterface(jl_module_t *   module,
     jl_gc_set_cb_post_gc(PostGCHook, 1);
     // jl_gc_enable(0); /// DEBUGGING
 
+#if defined(USE_GAP_INSIDE_JULIA)
+    DatatypeGapObj =
+        (jl_datatype_t *)jl_get_global(module, jl_symbol("GapObj"));
+    jl_reinit_foreign_type(DatatypeGapObj, MPtrMarkFunc, NULL);
+
+    DatatypeSmallBag =
+        (jl_datatype_t *)jl_get_global(module, jl_symbol("SmallBag"));
+    jl_reinit_foreign_type(DatatypeSmallBag, BagMarkFunc, JFinalizer);
+
+    DatatypeLargeBag =
+        (jl_datatype_t *)jl_get_global(module, jl_symbol("LargeBag"));
+    jl_reinit_foreign_type(DatatypeLargeBag, BagMarkFunc, JFinalizer);
+#else
     if (module == 0) {
         module = jl_main_module;
     }
 
-    if (parent == 0) {
-        parent = jl_any_type;
-    }
-
-// Julia defines HAVE_JL_REINIT_FOREIGN_TYPE if `jl_reinit_foreign_type`
-// is available.
-#ifdef HAVE_JL_REINIT_FOREIGN_TYPE
-    if (gap_jl_boundp(module, jl_symbol("GapObj"))) {
-        DatatypeGapObj =
-            (jl_datatype_t *)jl_get_global(module, jl_symbol("GapObj"));
-        jl_reinit_foreign_type(DatatypeGapObj, MPtrMarkFunc, NULL);
-
-        DatatypeSmallBag =
-            (jl_datatype_t *)jl_get_global(module, jl_symbol("SmallBag"));
-        jl_reinit_foreign_type(DatatypeSmallBag, BagMarkFunc, JFinalizer);
-
-        DatatypeLargeBag =
-            (jl_datatype_t *)jl_get_global(module, jl_symbol("LargeBag"));
-        jl_reinit_foreign_type(DatatypeLargeBag, BagMarkFunc, JFinalizer);
-
-        return;
-    }
-#endif
-
     // create and store data type for master pointers
     name = jl_symbol("GapObj");
-    DatatypeGapObj = GAP_DeclareGapObj(name, module, parent);
+    DatatypeGapObj = GAP_DeclareGapObj(name, module, jl_any_type);
     GAP_ASSERT(jl_is_datatype(DatatypeGapObj));
     jl_set_const(module, name, (jl_value_t *)DatatypeGapObj);
 
@@ -838,6 +804,7 @@ void GAP_InitJuliaMemoryInterface(jl_module_t *   module,
     DatatypeLargeBag = GAP_DeclareBag(name, module, jl_any_type, 1);
     GAP_ASSERT(jl_is_datatype(DatatypeLargeBag));
     jl_set_const(module, name, (jl_value_t *)DatatypeLargeBag);
+#endif
 }
 
 /****************************************************************************
@@ -849,11 +816,13 @@ void InitBags(UInt initial_size, Bag * stack_bottom)
 {
     TotalTime = 0;
 
-    if (!DatatypeGapObj) {
-        GAP_InitJuliaMemoryInterface(0, 0);
-    }
-
 #if !defined(USE_GAP_INSIDE_JULIA)
+    // initialize Julia memory interface. Note that this is only necessary
+    // when we run standalone. In contrast, when GAP is loaded from GAP.jl
+    // then GAP.jl invokes `GAP_InitJuliaMemoryInterface` at an appropriate
+    // point in time.
+    GAP_InitJuliaMemoryInterface(0, 0);
+
     GapStackBottom = stack_bottom;
 
     // If we are embedding Julia in GAP, remember the root task

@@ -390,8 +390,25 @@ local i,pcomp,m,r,D,neue,tm,news,opt;
   od;
 
   if opt<>true then
-    pcomp:=NullspaceMat(D.projectionMat*TransposedMatImmutable(Matrix(D.field,D.modulars)));
-    if Length(pcomp)>0 then
+    if Size(D.field)>2^16 then
+      r:=[];
+      for i in D.modulars do
+        if IsPlistVectorRep(i) then
+          Add(r,List(i,Int)*One(D.field));
+        else
+          Add(r,i);
+        fi;
+      od;
+      r:=NewMatrix(IsZmodnZMatrixRep,D.field,D.klanz,r);
+      if not IsZmodnZMatrixRep(D.projectionMat) then
+        D.projectionMat:=NewMatrix(IsZmodnZMatrixRep,D.field,D.klanz,List(D.projectionMat,x->List(x,Int))*One(D.field));
+      fi;
+    else
+      r:=Matrix(D.field,D.modulars);
+    fi;
+
+    pcomp:=NullspaceMat(D.projectionMat*TransposedMatImmutable(r));
+    if Length(pcomp)>2 then
       for i in [1..Length(D.raeume)] do
         r:=D.raeume[i];
         if r.dim = Length(r.base[1]) then

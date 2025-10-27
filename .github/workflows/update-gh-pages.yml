@@ -41,7 +41,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install --no-install-recommends "${packages[@]}"
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Configure GAP
         run: |
           ./autogen.sh && ./configure
@@ -67,7 +67,7 @@ jobs:
           mv doc/dev/bigpic.* public/doc/dev/
           cp dev/index.html public/
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: ./public
 
