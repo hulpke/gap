@@ -13,21 +13,21 @@ you first have to create that using the `dev/releases/create_stable_branch.py` s
 
 This is the way the process should happen in practice, with the help of GitHub Actions. Instructions for achieving the same without GitHub Actions are given later (in case GitHub Actions breaks or disappears).
 
-1. In the `gap-system/PackageDistro` GitHub repository, create an annotated tag `vX.Y.Z` based on its latest `main` branch (this determines which packages get into the release) and push the tag. For example:
+1. In the `gap-system/PackageDistro` GitHub repository, create an annotated and signed tag `vX.Y.Z` based on its latest `main` branch (this determines which packages get into the release) and push the tag. For example:
 ```
 VER=X.Y.Z      # to avoid typing
 git checkout main
 git pull
-git tag -m "Version ${VER}" v${VER} main
+git tag -s -m "Version ${VER}" v${VER} main
 git push origin v${VER}
 ```
 2. Wait. Pushing the tag triggers the “[Assemble the package distribution](https://github.com/gap-system/PackageDistro/actions/workflows/assemble-distro.yml)” GitHub Actions workflow; on `gap-system/PackageDistro`. This takes a few minutes.
-2. In the `gap-system/gap` GitHub repository, create an annotated tag `vX.Y.Z` at the appropriate commit in the `stable-X.Y` branch, and push the tag. For example:
+2. In the `gap-system/gap` GitHub repository, create an annotated and signed tag `vX.Y.Z` at the appropriate commit in the `stable-X.Y` branch, and push the tag. For example:
 ```
 VER=${VER}      # to avoid typing
 git checkout stable-${VER%.*}
 git pull
-git tag -m "Version ${VER}" v${VER} stable-${VER%.*}
+git tag -s -m "Version ${VER}" v${VER} stable-${VER%.*}
 git push origin v${VER}
 ```
 4. Wait. Pushing the tag triggers the “[Wrap releases](https://github.com/gap-system/gap/actions/workflows/release.yml)” GitHub Actions workflow on `gap-system/gap`, which wraps the release archives and Windows installers, and creates a release on GitHub with the archives and installers attached. This takes around 90 minutes.
@@ -36,7 +36,6 @@ git push origin v${VER}
   change the release from "pre-release" to "latest release" (i.e., on <https://github.com/gap-system/gap/releases/edit/vX.Y.Z> disable "Set as a pre-release" and enable "Set as the latest release").
 7. Next either manually dispatch the “[Sync](https://github.com/gap-system/GapWWW/actions/workflows/sync.yml)” GitHub Actions workflow on `gap-system/GapWWW`, or wait overnight for it to happen on schedule.
     - This workflow creates a pull request to `gap-system/GapWWW`, which updates the GAP website according to the release data hosted on `gap-system/gap`.  Check that the result is sensible.
-    - This workflow uses the `update_website.py` script which can also be run manually, see below for more information.
 8. When it is time to publicise the new GAP release, merge the pull request to GapWWW.
 9. There are currently additional steps required for the new manual to appear on <https://docs.gap-system.org>, and to add a copy of the new release files to <https://files.gap-system.org>.
 These could and should be automated in the future but are currently not. Details are described in steps 10 and following below.
@@ -89,7 +88,7 @@ Before starting the release process, the scripts have the following dependencies
 5. Access your local clone of the `GapWWW` repository.
 6. Make sure that your clone is up to date with `gap-system/GapWWW`.
 7. Check out the master branch.
-8. Start website update: either as described above via a workflow in the `GapWWW` repository; or by running `update_website.py` in root directory of `GapWWW` (see `update_website.py --help`). This:
+8. Start website update: either as described above via a workflow in the `GapWWW` repository; or switch to the root directory of `GapWWW` and run `etc/update_website.py` there (see also `etc/update_website.py --help`). This:
    - Fetches the GitHub releases data from `gap-system/gap`.
    - Deletes, modifies, and adds various JSON and HTML files according to this data.
 9. Inspect the changes, and commit and push them to the master branch to `gap-system/GapWWW`.
@@ -97,27 +96,16 @@ Before starting the release process, the scripts have the following dependencies
 ```
 ssh gap-docs                        # assumes gap-docs is set up in ~/.ssh/config
 
-VER=X.Y.Z                           # to avoid typing
-cd ~/data                           # follow symlink to target directory
-rm -rf package-infos.json* gap-*    # delete leftovers from previous release
-wget https://github.com/gap-system/gap/releases/download/v${VER}/package-infos.json.gz
-gunzip package-infos.json.gz
-wget https://github.com/gap-system/gap/releases/download/v${VER}/gap-${VER}.tar.gz
-tar xf gap-${VER}.tar.gz
-cd GapWWW
-git pull
-cd ..
-GapWWW/etc/extract_manuals.py gap-${VER} package-infos.json
-mv Manuals http/v${VER}
-rm http/latest
-ln -s v${VER} http/latest
+# then on the docs host
+./download_manuals.sh X.Y.Z   # e.g. 4.14.0
 ```
 11. Check that <https://docs.gap-system.org> is functioning as expected.
 12. Log into `files.gap-system.org` via SSH, then download the files in appropriate places:
 ```
 # assumes gap-files is set up in ~/.ssh/config
-scp dev/releases/download_release.sh gap-files:
 ssh gap-files
+
+# then on the files host
 ./download_release.sh X.Y.Z   # e.g. 4.14.0
 ```
 

@@ -846,7 +846,7 @@ static Obj FuncREAD(Obj self, Obj inputObj)
 **
 *F  FuncREAD_STREAM_LOOP( <self>, <instream>, <outstream> ) . . read a stream
 **
-**  Read data from <instream> in a read-eval-view loop and write all output
+**  Read data from <instream> in a read-eval-print loop and write all output
 **  to <outstream>. This is used by the GAP function `RunTests` and hence
 **  indirectly for implementing `Test` and `TestDirectory`,
 */
@@ -1135,7 +1135,7 @@ static Obj FuncGAP_chdir(Obj self, Obj path)
 static Obj FuncGAP_realpath(Obj self, Obj path)
 {
     RequireStringRep(SELF_NAME, path);
-    char resolved_path[PATH_MAX];
+    char resolved_path[GAP_PATH_MAX];
 
     if (NULL == realpath(CONST_CSTR_STRING(path), resolved_path)) {
         SySetErrorNo();

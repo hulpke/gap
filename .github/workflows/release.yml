@@ -68,10 +68,18 @@ jobs:
       gap-build-version: ${{ steps.get-build.outputs.name }}
 
     steps:
+      # We need to force fetch tags on the repository in the next step, which
+      # requires fetching the entire history. Therefore, we might as well do
+      # that here when checking out the repo, which is what setting fetch-depth
+      # to 0 accomplishes here.
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
+      # We need to know the git tags of the repository, because the GAP build
+      # system uses the tags to generate the version string for the GAP build,
+      # which we then extract in the "Record the GAP build version" step below.
+      #
       # When an annotated tag is pushed, then for some reason we don't see it
       # in this action; instead an unannotated tag with the same name is
       # present, we resolve this by force-fetching tags.
@@ -144,7 +152,7 @@ jobs:
       #
       # Warning: the result is a single .zip file (so things are compressed twice).
       - name: "Upload GAP tarball"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           if-no-files-found: error
           name: gap
@@ -153,7 +161,7 @@ jobs:
 
       # Always upload metadata, and keep longer, since it is much smaller.
       - name: "Upload JSON metadata"
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           if-no-files-found: error
           name: "JSON metadata"
@@ -188,7 +196,7 @@ jobs:
       # Download the artifact -- for an actual release, this contains the
       # exact same tarball as was uploaded to the release as an asset
       - name: "Download GAP archive from previous job"
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: gap
 
@@ -231,7 +239,7 @@ jobs:
       # Artifacts live for 1 day, i.e. until the next cron job runs.
       - name: "Upload the installer as an artifact"
         if: ${{ github.event_name == 'schedule' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           if-no-files-found: error
           name: gap-${{ env.GAP_VERSION }}-x86_64.exe

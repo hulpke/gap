@@ -139,9 +139,10 @@ local p,primes,i,cl,spr,j,allpowermaps,pm,ex;
   od;
 
   for p in primes do
-    allpowermaps[p]:=List(D.classrange,i->ShallowCopy(D.classrange));
-    allpowermaps[p][1]:=1;
-    #allpowermaps[p]:=InitPowerMap(D.characterTable,p);
+    if not IsBound( allpowermaps[p] ) then
+      allpowermaps[p]:=List(D.classrange,i->ShallowCopy(D.classrange));
+      allpowermaps[p][1]:=1;
+    fi;
   od;
 
   for p in primes do
@@ -199,6 +200,27 @@ fi;
     MakeImmutable( pm );
   od;
 end );
+
+
+#############################################################################
+##
+#F  ComputeAllPowerMaps( <tbl> )
+##
+##  Computing all power maps is cheaper than successively computing some
+##  values of individual power maps.
+##  The current code is a hack.
+##  (Apparently 'DxCalcAllPowerMaps' is much faster than other available
+##  functions.)
+##  It should be improved as soon as we have a general tool for the
+##  identification of conjugacy classes.
+##
+BindGlobal( "ComputeAllPowerMaps", function( tbl )
+  tbl:= UnderlyingGroup( tbl );
+  if not HasDixonRecord( tbl ) then
+    DxCalcAllPowerMaps( DixonRecord( tbl ) );
+  fi;
+end );
+
 
 #############################################################################
 ##
@@ -2047,12 +2069,9 @@ end );
 #F  DixonInit(<G>) . . . . . . . . . . initialize Dixon-Schneider algorithm
 ##
 ##
-InstallGlobalFunction( DixonInit, function(arg)
-local G,     # group
-      D,     # Dixon record,result
-      k,z,exp,prime,M,m,f,r,ga,i,fk;
-
-  G:=arg[1];
+InstallGlobalFunction( DixonInit, function(G, opt...)
+local D,     # Dixon record,result
+      k,z,exp,prime,M,m,f,r,ga,i,fk, knownirr;
 
   # Force computation of the size of the group.
   Size(G);
@@ -2124,6 +2143,17 @@ local G,     # group
   D.projectionMat:=M;
 
   DxIncludeIrreducibles(D,DxLinearCharacters(D));
+  if Length( opt ) = 1 and IsRecord( opt[1] ) and IsBound( opt[1].knownirreducibles ) then
+    # The ordering of classes for these characters refers to
+    # the 'ConjugacyClasses' value of their character table.
+    # We check whether these classes coincide with 'D.classes'.
+    knownirr:= opt[1].knownirreducibles;
+    if 0 < Length( knownirr ) and
+       IsIdenticalObj( D.classes,
+           ConjugacyClasses( UnderlyingCharacterTable( knownirr[1] ) ) ) then
+      DxIncludeIrreducibles( D, knownirr );
+    fi;
+  fi;
 
   if Length(D.raeume)>0 then
     # indicate Stabilizer of the whole orbit,simultaneously compute
@@ -2290,8 +2320,23 @@ InstallMethod( Irr,
     "Dixon/Schneider",
     [ IsGroup, IsZeroCyc ],
     function( G, zero )
-    local irr, C;
-    irr:= IrrDixonSchneider( G );
+    local opt, irr, C;
+
+    # Perhaps a cheaper method for 'G' exists but is not applicable.
+    opt:= rec();
+    if IsSolvableGroup( G ) then
+      irr:= IrrBaumClausen( G );
+      if Length( irr ) = NrConjugacyClasses( G ) then
+        # The list is complete.
+        C:= OrdinaryCharacterTable( G );
+        SetIrr( C, irr );
+        ComputeAllPowerMaps( C );
+        return irr;
+      fi;
+      # We feed the partial list into the Dixon-Schneider-algorithm.
+      opt.knownirreducibles:= irr;
+    fi;
+    irr:= IrrDixonSchneider( G, opt );
     C:= OrdinaryCharacterTable( G );
     SetIrr( C, irr );
     SetInfoText( C, "origin: Dixon's Algorithm" );
