@@ -2776,7 +2776,6 @@ local d,iso,a,b,c,o,s,two,rt,r,z,e,y,re,m,gens,cnt,lim,p,
     gens:=b;
     e:=Order(gens[2]);
     re:= rec( first:= e, offset:= e, last:= Size(g) );
-    re:= rec( first:= e, offset:= e, last:= Size(g) );
     y:=Size(Centralizer(g,gens[2]));
   fi;
   Info(InfoMorph,1,"generators ",List(gens,Order));
