@@ -1975,6 +1975,7 @@ local oa,ob,q,aa,m,e,tst,s,c,p,g;
   return q*e mod oa;
 end);
 
+Read("~/iCloud/MinimalGeneratingSet.g");
 
 #############################################################################
 ##
@@ -1983,7 +1984,7 @@ end);
 InstallMethod(SmallGeneratingSet,"random and generators subset, randsims",true,
   [IsPermGroup],0,
 function (G)
-local  i, j, U, gens,a,mintry,orb,orp,isok;
+local  t1,t2,i, j, U, gens,a,mintry,orb,orp,isok;
 
   gens := ShallowCopy(Set(GeneratorsOfGroup(G)));
 
@@ -2035,6 +2036,9 @@ local  i, j, U, gens,a,mintry,orb,orp,isok;
     return Size(U)=Size(G);
   end;
 
+DerivedSubgroup(G);
+t1:=Runtime();
+
   mintry:=2;
   if Length(gens)>2 then
     # lower bound on what to accept -- use index of G' instead of full
@@ -2068,6 +2072,14 @@ local  i, j, U, gens,a,mintry,orb,orp,isok;
       i:=i+1;
     fi;
   od;
+
+t1:=Runtime()-t1;
+t2:=Runtime();
+U:=SmallestGeneratingSetHT(G);
+t2:=Runtime()-t2;
+if Length(U)>Length(gens) then Error("wrong");fi;
+AppendTo("/Users/hulpke/mingens",Length(U),",",Length(gens),",",t1,",",t2,"\n");
+
   return gens;
 end);
 
