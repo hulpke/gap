@@ -1975,6 +1975,7 @@ local oa,ob,q,aa,m,e,tst,s,c,p,g;
   return q*e mod oa;
 end);
 
+Read("~/iCloud/MinimalGeneratingSet.g");
 
 #############################################################################
 ##
@@ -1983,9 +1984,10 @@ end);
 InstallMethod(SmallGeneratingSet,"random and generators subset, randsims",true,
   [IsPermGroup],0,
 function (G)
-local  i, j, U, gens,a,mintry,orb,orp,isok;
+local  t1,t2,i, j, U, gens,a,mintry,orb,orp,isok,ngen;
 
   gens := ShallowCopy(Set(GeneratorsOfGroup(G)));
+  ngen:=Length(gens);
 
   # remove obvious redundancies...
   # sort elements by descending order; trivial permutations
@@ -2012,10 +2014,8 @@ local  i, j, U, gens,a,mintry,orb,orp,isok;
 
   # try pc methods. The solvability test should not exceed cost, nor
   # the number of points.
-  if #Length(MovedPoints(G))<50000 and
-   #((HasIsSolvableGroup(G) and IsSolvableGroup(G)) or IsAbelian(G))
-      IsSolvableGroup(G)
-      and Length(gens)>3 then
+  # this will in particular cover the case of cyclic groups
+  if IsSolvableGroup(G) then
     return MinimalGeneratingSet(G);
   fi;
 
@@ -2031,9 +2031,13 @@ local  i, j, U, gens,a,mintry,orb,orp,isok;
       return false;
     fi;
 
-    StabChainOptions(U).random:=100; # randomized size
+    StabChainOptions(U).random:=1; # randomized size
+    StabChainOptions(U).limit:=Size(G); # randomized size
     return Size(U)=Size(G);
   end;
+
+DerivedSubgroup(G);
+t1:=Runtime();
 
   mintry:=2;
   if Length(gens)>2 then
@@ -2068,6 +2072,16 @@ local  i, j, U, gens,a,mintry,orb,orp,isok;
       i:=i+1;
     fi;
   od;
+
+t1:=Runtime()-t1;
+if ngen>3 then
+  t2:=Runtime();
+  U:=SmallestGeneratingSetHT(G);
+  t2:=Runtime()-t2;
+  if Length(U)>Length(gens) then Error("wrong");fi;
+  #AppendTo("/Users/hulpke/mingens",Length(U),",",Length(gens),",",t1,",",t2,"\n");
+fi;
+
   return gens;
 end);
 
