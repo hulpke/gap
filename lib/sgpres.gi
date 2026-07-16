@@ -3239,10 +3239,8 @@ local freegens,freerels,subgens,aug,trace,e,ldc,up,bastime,start,bl,bw,first,tim
     aug:=arg[4];
   fi;
   if aug<>false then
-    # if augmented, optimize by default
-    if trace=false then
-      trace:=[];
-    else
+    # if augmented, optimize if asked
+    if trace<>false then
       trace:=arg[5];
     fi;
   elif trace<>false then
