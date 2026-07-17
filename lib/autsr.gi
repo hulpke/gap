@@ -1061,6 +1061,30 @@ local
   ac,            # NOTE: multi-role -- an orbit-stabilizer record, an
                  # inner automorphism, and an AGSRReducedGens result pair
   lastperm,      # cached AQiso carried to the next step (or fail)
+  # -- assembling a hybrid representation
+  CBasis,        # Basis of C, first conjugator, then extra
+  Ccocyc,        # corresponding cocycles
+  Cdecomp,       # decomposition function
+  BP,            # permrep of B
+  rA,rB,         # radicals
+  BPiso,         # map matrix->perm
+  Brew,CMPB,     # iso to rewrite
+  Blgens,        # generators corresponding to letters of presentation
+  BlPgens,       # perm generators corresponding to letters of presentation
+  Bdecomp,       # function taking B-automorphism and making word out of it
+  Bpcgs,
+  Apcgs,
+  rAind,rBind,   # generator indices in radical
+  Adash,         # reps lifted
+  Arew,CMPA,     # iso to rewrite from perm
+  AlPgens,       # perm generators corresponding to letters of presentation
+  Algens,        # autom generators corresponding to letters of presentation
+  Adecomp,       # function taking A-automorphism and making word out of it
+  radpcgs,       # automorphisms forming a pcgs of the radical
+  relo,          # its relative orders
+  radecomp,      # decomposition function in radpcgs
+  assigner,      # assignment function to preserve local variable values
+
   # -- induced radical automorphisms (optional acceleration) --
   rada,          # the automorphism group of the radical (used to speed up
                  # later steps)
@@ -1103,6 +1127,11 @@ local
     b;   # scratch: a small generating set, the reduced image group, or inner
          # automorphisms
     Info(InfoMorph,3,"enter makeaqiso");
+    if HasInnerAutomorphismsAutomorphismGroup(AQ) then
+      AQI:=InnerAutomorphismsAutomorphismGroup(AQ);
+    elif not (IsGroup(AQI) and Source(One(AQI))=Source(One(AQ))) then
+      AQI:=fail;
+    fi;
     if HasIsomorphismPermGroup(AQ) then
       AQiso:=IsomorphismPermGroup(AQ);
     elif HasNiceMonomorphism(AQ) and IsPermGroup(Range(NiceMonomorphism(AQ))) then
@@ -1117,9 +1146,10 @@ local
           b:=Filtered(GeneratorsOfGroup(AQ),x->not HasConjugatorOfConjugatorIsomorphism(x));
           a:=Concatenation(a,b);
           SetIsAutomorphismGroup(AQ,true);
-          b:=InnerAutomorphismsAutomorphismGroup(AQ);
           AQ:=Group(a,One(AQ));
-          SetInnerAutomorphismsAutomorphismGroup(AQ,b);
+          if AQI<>fail then
+            SetInnerAutomorphismsAutomorphismGroup(AQ,AQI);
+          fi;
           SetIsGroupOfAutomorphismsFiniteGroup(AQ,true);
         fi;
       fi;
@@ -1137,6 +1167,9 @@ local
       if a<>fail then
         AQP:=a[1];
         AQ:=a[2];
+        if AQI<>fail then
+          SetInnerAutomorphismsAutomorphismGroup(AQ,AQI);
+        fi;
       fi;
     fi;
 
@@ -1410,12 +1443,33 @@ local
     Zm:=PreImage(q,Centre(OQ));
     D:=Centralizer(Zm,Mim);
 
+    # data for decomposition
+    CBasis:=[];
+    Ccocyc:=[];
+    assigner:=function(oldocr)
+      return function(chom)
+      local list;
+        list:=List(oldocr.generators,x->x^-1*ImagesRepresentative(chom,x));
+        list:=oldocr.listToCocycle(list);
+        return SolutionMat(Ccocyc,list);
+      end;
+    end;
+    Cdecomp:=assigner(ocr);
+
     innC:=List(GeneratorsOfGroup(D),d->InnerAutomorphism(Q,d));
 
     D:=List(innC,inn->List(ocr.generators,o->Image(inn,o)));
     D:=List(D,d->List([1..Length(ocr.generators)],i->ocr.generators[i]^-1*d[i]));
     D:=List(D,d->ocr.listToCocycle(d));
-    TriangulizeMat(D);
+
+    for j in [1..Length(innC)] do
+      if Length(Ccocyc)=0 or SolutionMat(Ccocyc,D[j])=fail then
+        Add(Ccocyc,D[j]);
+        Add(CBasis,innC[j]);
+      fi;
+    od;
+
+    D:=TriangulizedMat(Ccocyc);
     D:=Filtered(D,x->x<>0*x);
 
     b:=BaseSteinitzVectors(b,D).factorspace;
@@ -1427,11 +1481,13 @@ local
       extra:=[];
     fi;
     for j  in b  do
+      Add(Ccocyc,j);
       oneC := ocr.cocycleToList( j );
       imgs:=List([1..Length(ocr.generators)],i->ocr.generators[i]*oneC[i]);
       oneC:=GroupHomomorphismByImagesNC(Q,Q,Concatenation(ocr.generators,extra),Concatenation(imgs,extra));
       Assert(2,IsBijective(oneC));
       Add(C,oneC);
+      Add(CBasis,oneC);
     od;
 
     B:=[];
@@ -1444,7 +1500,34 @@ local
     fi;
 
     if split then
+      gens:=GeneratorsOfGroup(ocr.complement);
+
       maut:=MTX.ModuleAutomorphisms(mo);
+
+      BPiso:=IsomorphismPermGroup(maut);
+      BP:=Image(BPiso);
+      CMPB:=ConfluentMonoidPresentationForGroup(BP);
+      Brew:=CMPB.fphom;
+      Bdecomp:=function(bhom)
+        # linear action
+        bhom:=List(MPcgs,x->ExponentsOfPcElement(MPcgs,ImagesRepresentative(bhom,x)))
+          *One(mo.field);
+        return ImagesRepresentative(Brew,ImagesRepresentative(BPiso,bhom));
+      end;
+
+      BlPgens:=List(GeneratorsOfGroup(Range(Brew)),
+        x->PreImagesRepresentative(Brew,x));
+      Blgens:=List(BlPgens,x->PreImagesRepresentative(BPiso,x));
+
+      A:=Blgens;
+      Blgens:=[];
+      for a  in A  do
+        imM:=List(a,i->PcElementByExponents(MPcgs,i));
+        imM:=GroupHomomorphismByImagesNC(Q,Q,Concatenation(MPcgs,gens),Concatenation(imM,gens));
+        Assert(2,IsBijective(imM));
+        Add(Blgens,imM);
+      od;
+
       # find noninner of B
       innB:=List(SmallGeneratingSet(Zm),z->InnerAutomorphism(Q,z));
       innB:=Group(One(DefaultFieldOfMatrixGroup(maut))*
@@ -1452,7 +1535,6 @@ local
 
       tmpAut:=SubgroupNC(maut,Filtered(GeneratorsOfGroup(maut),aut->not aut in innB));
 
-      gens:=GeneratorsOfGroup(ocr.complement);
       for a  in GeneratorsOfGroup(tmpAut)  do
         imM:=List(a,i->PcElementByExponents(MPcgs,i));
         imM:=GroupHomomorphismByImagesNC(Q,Q,Concatenation(MPcgs,gens),Concatenation(imM,gens));
@@ -1503,6 +1585,7 @@ local
     else
       # there is no B in the nonsplit case
       B:=[];
+      BP:=fail;
 
       ocr:=AGSRPrepareAutomLift( Q, MPcgs, q );
 
@@ -1638,6 +1721,90 @@ local
     fi;
 
     Info(InfoMorph,2,"Lift Index ",Size(AQP)/Size(sub));
+
+    CMPA:=ConfluentMonoidPresentationForGroup(Aperm);
+    Arew:=CMPA.fphom;
+
+    assigner:=function(oldq,oldAQiso)
+      return function(ahom)
+        return ImagesRepresentative(Arew,
+          ImagesRepresentative(oldAQiso,InducedAutomorphism(oldq,ahom)));
+      end;
+    end;
+    Adecomp:=assigner(q,AQiso);
+
+    # letters to permgens
+    AlPgens:=List(GeneratorsOfGroup(Image(Arew)),x->PreImagesRepresentative(Arew,x));
+
+    # and now to fixed representatives
+    Adash:=List(GeneratorsOfGroup(AQI),
+        x->PreImagesRepresentative(q,ConjugatorOfConjugatorIsomorphism(x)));
+    Adash:=Filtered(Adash,x->not IsOne(x));
+    Adash:=List(Adash,x->ConjugatorAutomorphism(Source(q),x));
+    Adash:=Concatenation(A,Adash);
+    ind:=List(Adash,x->ImagesRepresentative(AQiso,InducedAutomorphism(q,x)));
+
+    ind:=GroupGeneralMappingByImagesNC(Group(ind),Group(Adash),ind,Adash);
+    Algens:=List(AlPgens,x->ImagesRepresentative(ind,x));
+
+    # now combine the presentations into a hybrid one, exposing the radical
+    if BP<>fail then
+      rB:=RadicalGroup(BP);
+      rBind:=Filtered([1..Length(BlPgens)],x->BlPgens[x] in rB);
+      Bpcgs:=BlPgens{rBind};
+      Bpcgs:=PcgsByPcSequence(FamilyObj(One(BP)),Bpcgs);
+      if rB<>Subgroup(BP,Bpcgs) then
+        Error("B presentation does not exhibit radical.");
+      fi;
+    fi;
+
+    rA:=RadicalGroup(Aperm);
+    rAind:=Filtered([1..Length(AlPgens)],x->AlPgens[x] in rA);
+    Apcgs:=AlPgens{rAind};
+    if rA<>Subgroup(Aperm,Apcgs) then
+      Error("A presentation does not exhibit radical.");
+    fi;
+    Apcgs:=PcgsByPcSequence(FamilyObj(One(Aperm)),Apcgs);
+    radpcgs:=Algens{rAind};
+    relo:=ShallowCopy(RelativeOrders(Apcgs));
+    if BP<>fail then
+      radpcgs:=Concatenation(radpcgs,Blgens{rBind});
+      Append(relo,RelativeOrders(Bpcgs));
+    fi;
+    Append(radpcgs,CBasis);
+    Append(relo,ListWithIdenticalEntries(Length(CBasis),Size(mo.field)));
+
+    # decompose a an automorphism in <radpcgs> to an exponent vector.
+    assigner:=function(oldq,oldAQiso)
+      return function(elm)
+      local a,e;
+        if Length(rAind)>0 then
+          a:=InducedAutomorphism(oldq,elm);
+          a:=ImagesRepresentative(oldAQiso,a);
+          e:=ExponentsOfPcElement(Apcgs,a);
+          d:=LinearCombinationPcgs(Algens{rAind},e);
+          elm:=LeftQuotient(d,elm);
+        else
+          e:=[];
+        fi;
+        if BP<>fail then
+          d:=List(MPcgs,x->ExponentsOfPcElement(MPcgs,ImagesRepresentative(elm,x)))*
+            One(mo.field);
+          d:=ImagesRepresentative(BPiso,d);
+          d:=ExponentsOfPcElement(Bpcgs,d);
+          Append(e,d);
+          d:=LinearCombinationPcgs(Blgens{rBind},d);
+          elm:=LeftQuotient(d,elm);
+        fi;
+        d:=List(Cdecomp(elm),Int);
+        Append(e,d);
+        return e;
+      end;
+    end;
+
+    radecomp:=assigner(q,AQiso);
+
+    #Error("HaveA");
 
     # now make the new automorphism group
     innB:=List(SmallGeneratingSet(Q),x->InnerAutomorphism(Q,x));
