@@ -162,13 +162,20 @@ local cla,clb,i,j,k,bd,r,rep,b2,dc,clu,
       if r=fail then
         Info(InfoCoset,1,"Too many subset combinations");
       else
+        clu:=[]; # potential conjugate ones
         Info(InfoCoset,1,"Testing ",Length(r)," combinations");
         dc:=[];
         for i in r do
           k:=List(i,x->Union(clb{x}));
           k:=RepresentativeAction(g,k,cla,OnTuplesSets);
           if k<>fail then
-            Add(dc,[i,k]);
+            # find the conjugate orbit constellation
+            b2:=OnSetsSets(Set(clb),k);
+            Add(dc,[i,k,b2]);
+            j:=First([1..Length(clu)],x->RepresentativeAction(a,dc[clu[x][1]][3],b2,OnSetsSets)<>fail);
+            if j= fail then Add(clu,[Length(dc)]);j:=Length(clu);
+            else Add(clu[j],Length(dc));fi;
+            Add(dc[Length(dc)],j); # cluster position
           fi;
         od;
         if Length(dc)>0 then g:=Stabilizer(g,cla,OnTuplesSets);fi;
