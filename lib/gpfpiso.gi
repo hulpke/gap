@@ -253,7 +253,7 @@ function(g,str,N)
   local ser, ab, homs, gens, idx, start, pcgs, hom, f, fgens, auts, sf, orb,
   tra, j, a, ad, lad, n, fg, free, rels, fp, vals, dec, still, lgens, ngens,
   nrels, nvals, p, dodecomp, decomp, hogens, di, i, k, l,ser1,
-  m,abelianlimit,locallim,abpow,needgens,fampcgs,rad;
+  m,abelianlimit,locallim,abpow,needgens,fampcgs,rad,dorewrite;
 
   abelianlimit:=ValueOption("abelianlimit");
   if abelianlimit=fail then
@@ -269,8 +269,9 @@ function(g,str,N)
     return GroupHomomorphismByImagesNC(g,TRIVIAL_FP_GROUP,GeneratorsOfGroup(g),
              List(GeneratorsOfGroup(g),x->One(TRIVIAL_FP_GROUP)):noassert);
   fi;
+  dorewrite:=ValueOption("rewrite")=true;
 
-  if ValueOption("rewrite")=true then
+  if dorewrite then
     # try to go through radical (image) and pick generators split in radical factor
     rad:=ClosureGroup(SolvableRadical(g),N);
     ser:=[];
@@ -433,7 +434,7 @@ function(g,str,N)
       # we know sf is simple
       SetIsNonabelianSimpleGroup(sf,true);
       IsNaturalAlternatingGroup(sf);
-      if ValueOption("rewrite")=true then
+      if dorewrite then
         a:=IsomorphismFpGroupForRewriting(sf:noassert);
       else
         a:=IsomorphismFpGroup(sf:noassert);
@@ -442,10 +443,10 @@ function(g,str,N)
       lad:=Length(ad);
 
       n:=Length(orb);
-      if n=1 and ValueOption("rewrite")=true then
+      if n=1 and dorewrite then
         fgens:=ad;
       else
-        if ValueOption("rewrite")=true then
+        if dorewrite then
           Info(InfoPerformance,1,
           "Rewriting system preservation for direct product not yet written");
         fi;
@@ -1108,14 +1109,20 @@ end);
 
 # return isomorphism G-fp and fp->mon, such that presentation of monoid is
 # confluent (wrt wreath order). Returns record with fphom,monhom,ordering
-InstallMethod(ConfluentMonoidPresentationForGroup,"generic",
-  [IsGroup and IsFinite],
-function(G)
-local iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
+
+DoCMPFG:=function(arg)
+local G,iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
       loff,off,monreps,left,right,fmgens,r,diff,monreal,nums,reduce,hom,dept,
-      lode,lrules,rulet,addrule;
+      lode,lrules,rulet,addrule,through;
+  G:=arg[1];
+  if Length(arg)>1 then
+    through:=arg[2];
+  else
+    through:=[];
+  fi;
+  through:=Filtered(through,x->Size(x)>1 and Size(x)<Size(G));
   IsSimpleGroup(G);
-  if IsSymmetricGroup(G) then
+  if Length(through)=0 and IsSymmetricGroup(G) then
     i:=SymmetricGroup(SymmetricDegree(G));
     iso:=CheapIsomSymAlt(G,i)*IsomorphismFpGroup(i);
     fp:=Range(iso);
@@ -1128,9 +1135,16 @@ local iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
     dept:=fail;
   else
     iso:=IsomorphismFpGroupByChiefSeries(G:rewrite);
-
     fp:=Range(iso);
     gens:=GeneratorsOfGroup(fp);
+
+    if Length(through)>0 then
+      mgens:=List(gens,x->PreImagesRepresentative(iso,x));
+      if ForAny(through,x->Subgroup(G,Filtered(mgens,y->y in x))<>x) then
+        Error("does not expose required subgroup");
+      fi;
+    fi;
+
     dec:=iso!.decompinfo;
 
     fmgens:=[];
@@ -1321,7 +1335,15 @@ local iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
   k:=KnuthBendixRewritingSystem(FamilyObj(One(m)),j.ordering:isconfluent);
   MakeConfluent(k); # will store in monoid as reducedConfluent
   return j;
-end);
+end;
+
+InstallMethod(ConfluentMonoidPresentationForGroup,"generic",
+  [IsGroup and IsFinite],
+  DoCMPFG);
+
+InstallOtherMethod(ConfluentMonoidPresentationForGroup,"generic, through",
+  [IsGroup and IsFinite, IsList],
+  DoCMPFG);
 
 # special method for pc groups, basically just writing down the pc
 # presentation
