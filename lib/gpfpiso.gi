@@ -1107,14 +1107,20 @@ end);
 
 # return isomorphism G-fp and fp->mon, such that presentation of monoid is
 # confluent (wrt wreath order). Returns record with fphom,monhom,ordering
-InstallMethod(ConfluentMonoidPresentationForGroup,"generic",
-  [IsGroup and IsFinite],
-function(G)
-local iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
+
+DoCMPFG:=function(arg)
+local G,iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
       loff,off,monreps,left,right,fmgens,r,diff,monreal,nums,reduce,hom,dept,
-      lode,lrules,rulet,addrule;
+      lode,lrules,rulet,addrule,through;
+  G:=arg[1];
+  if Length(arg)>1 then
+    through:=arg[2];
+  else
+    through:=[];
+  fi;
+  through:=Filtered(through,x->Size(x)>1 and Size(x)<Size(G));
   IsSimpleGroup(G);
-  if IsSymmetricGroup(G) then
+  if Length(through)=0 and IsSymmetricGroup(G) then
     i:=SymmetricGroup(SymmetricDegree(G));
     iso:=CheapIsomSymAlt(G,i)*IsomorphismFpGroup(i);
     fp:=Range(iso);
@@ -1127,9 +1133,16 @@ local iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
     dept:=fail;
   else
     iso:=IsomorphismFpGroupByChiefSeries(G:rewrite);
-
     fp:=Range(iso);
     gens:=GeneratorsOfGroup(fp);
+
+    if Length(through)>0 then
+      mgens:=List(gens,x->PreImagesRepresentative(iso,x));
+      if ForAny(through,x->Subgroup(G,Filtered(mgens,y->y in x))<>x) then
+        Error("does not expose required subgroup");
+      fi;
+    fi;
+
     dec:=iso!.decompinfo;
 
     fmgens:=[];
@@ -1320,7 +1333,15 @@ local iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
   k:=KnuthBendixRewritingSystem(FamilyObj(One(m)),j.ordering:isconfluent);
   MakeConfluent(k); # will store in monoid as reducedConfluent
   return j;
-end);
+end;
+
+InstallMethod(ConfluentMonoidPresentationForGroup,"generic",
+  [IsGroup and IsFinite],
+  DoCMPFG);
+
+InstallOtherMethod(ConfluentMonoidPresentationForGroup,"generic, through",
+  [IsGroup and IsFinite, IsList],
+  DoCMPFG);
 
 # special method for pc groups, basically just writing down the pc
 # presentation

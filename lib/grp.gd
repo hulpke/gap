@@ -4687,6 +4687,7 @@ DeclareAttribute( "IsomorphismFpGroupForRewriting", IsGroup );
 ##  <#GAPDoc Label="ConfluentMonoidPresentationForGroup">
 ##  <ManSection>
 ##  <Attr Name="ConfluentMonoidPresentationForGroup" Arg='G'/>
+##  <Attr Name="ConfluentMonoidPresentationForGroup" Arg='G,t'/>
 ##
 ##  <Description>
 ##  This attribute holds, for a (finite) group <A>G</A>, a record that holds
@@ -4696,6 +4697,8 @@ DeclareAttribute( "IsomorphismFpGroupForRewriting", IsGroup );
 ##  is a confluent rewriting system, and an ordering wrt. which this system is
 ##  confluent.  It is made an attribute
 ##  to ensure that iterated cohomology computations use the same presentation.
+##  If a second argument <A>t</A> is given, it must be a list of subgroups
+##  that are to be exposed by the presentation.
 ##  </Description>
 ##  </ManSection>
 ##  <#/GAPDoc>
