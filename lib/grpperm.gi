@@ -2079,7 +2079,7 @@ if ngen>3 then
   U:=SmallestGeneratingSetHT(G);
   t2:=Runtime()-t2;
   if Length(U)>Length(gens) then Error("wrong");fi;
-  AppendTo("/Users/hulpke/mingens",Length(U),",",Length(gens),",",t1,",",t2,"\n");
+  #AppendTo("/Users/hulpke/mingens",Length(U),",",Length(gens),",",t1,",",t2,"\n");
 fi;
 
   return gens;
