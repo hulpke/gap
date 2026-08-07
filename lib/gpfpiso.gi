@@ -300,6 +300,11 @@ function(g,str,N)
       od;
 
       if Length(ser1)>0 or Size(ser[1])<Size(f) then
+        if ValueOption("through")<>fail then
+          fg:=ValueOption("through");
+          fg:=List(fg,x->Image(hom,x));
+          ser:=Concatenation(ser,Filtered(fg,x->not x in ser));
+        fi;
         ser:=ChiefSeriesThrough(f,ser);
         gens:=Union(gens,Union(List(ser,SmallGeneratingSet)));
       fi;
@@ -333,7 +338,13 @@ function(g,str,N)
   elif IsTrivial(N) then
     ser:=ChiefSeries(g);
   else
-    if HasChiefSeries(g) and N in ChiefSeries(g) then
+    if ValueOption("through")<>fail then
+      ser:=ValueOption("through");
+      if not N in ser then
+        ser:=Concatenation([N],ser);
+      fi;
+      ser:=ChiefSeriesThrough(g,ser);
+    elif HasChiefSeries(g) and N in ChiefSeries(g) then
       ser:=ChiefSeries(g);
     else
       ser:=ChiefSeriesThrough(g,[N]);
@@ -1133,7 +1144,7 @@ local G,iso,fp,dec,homs,mos,i,j,ffp,imo,m,k,gens,fm,mgens,rules,
     rules:=Rules(k);
     dept:=fail;
   else
-    iso:=IsomorphismFpGroupByChiefSeries(G:rewrite);
+    iso:=IsomorphismFpGroupByChiefSeries(G:rewrite,through:=through);
     fp:=Range(iso);
     gens:=GeneratorsOfGroup(fp);
 
