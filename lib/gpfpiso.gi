@@ -253,7 +253,7 @@ function(g,str,N)
   local ser, ab, homs, gens, idx, start, pcgs, hom, f, fgens, auts, sf, orb,
   tra, j, a, ad, lad, n, fg, free, rels, fp, vals, dec, still, lgens, ngens,
   nrels, nvals, p, dodecomp, decomp, hogens, di, i, k, l,ser1,
-  m,abelianlimit,locallim,abpow,needgens,fampcgs,rad;
+  m,abelianlimit,locallim,abpow,needgens,fampcgs,rad,dorewrite;
 
   abelianlimit:=ValueOption("abelianlimit");
   if abelianlimit=fail then
@@ -269,8 +269,9 @@ function(g,str,N)
     return GroupHomomorphismByImagesNC(g,TRIVIAL_FP_GROUP,GeneratorsOfGroup(g),
              List(GeneratorsOfGroup(g),x->One(TRIVIAL_FP_GROUP)):noassert);
   fi;
+  dorewrite:=ValueOption("rewrite")=true;
 
-  if ValueOption("rewrite")=true then
+  if dorewrite then
     # try to go through radical (image) and pick generators split in radical factor
     rad:=ClosureGroup(SolvableRadical(g),N);
     ser:=[];
@@ -432,7 +433,7 @@ function(g,str,N)
       # we know sf is simple
       SetIsNonabelianSimpleGroup(sf,true);
       IsNaturalAlternatingGroup(sf);
-      if ValueOption("rewrite")=true then
+      if dorewrite then
         a:=IsomorphismFpGroupForRewriting(sf:noassert);
       else
         a:=IsomorphismFpGroup(sf:noassert);
@@ -441,10 +442,10 @@ function(g,str,N)
       lad:=Length(ad);
 
       n:=Length(orb);
-      if n=1 and ValueOption("rewrite")=true then
+      if n=1 and dorewrite then
         fgens:=ad;
       else
-        if ValueOption("rewrite")=true then
+        if dorewrite then
           Info(InfoPerformance,1,
           "Rewriting system preservation for direct product not yet written");
         fi;
