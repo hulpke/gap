@@ -1074,7 +1074,9 @@ local
   Bdecomp,       # function taking B-automorphism and making word out of it
   Bpcgs,
   Apcgs,
-  rAind,rBind,   # generator indices in radical
+  Apcgspre,      # preimages auts
+  Bpcgspre,
+  autforBP,
   Adash,         # reps lifted
   Arew,CMPA,     # iso to rewrite from perm
   AlPgens,       # perm generators corresponding to letters of presentation
@@ -1084,6 +1086,35 @@ local
   relo,          # its relative orders
   radecomp,      # decomposition function in radpcgs
   assigner,      # assignment function to preserve local variable values
+  tmp,
+
+  Aff,
+  premap,
+  afgens,
+  agauts,
+  aidx,
+  Aims,
+  Amogens,
+  Apremap,
+  Arf,
+  ARG,
+  Asoc,
+  autslets,
+  Bactims,
+  Bauts,
+  bgauts,
+  bidx,
+  Bims,
+  bprfhom,
+  Bsoc,
+  BsocG,
+  Bsocpre,
+  DP,
+  rBff,
+  sdKA,
+  sdKB,
+  sdp,
+  sdpgens,
 
   # -- induced radical automorphisms (optional acceleration) --
   rada,          # the automorphism group of the radical (used to speed up
@@ -1506,27 +1537,36 @@ local
 
       BPiso:=IsomorphismPermGroup(maut);
       BP:=Image(BPiso);
-      CMPB:=ConfluentMonoidPresentationForGroup(BP);
-      Brew:=CMPB.fphom;
-      Bdecomp:=function(bhom)
-        # linear action
-        bhom:=List(MPcgs,x->ExponentsOfPcElement(MPcgs,ImagesRepresentative(bhom,x)))
-          *One(mo.field);
-        return ImagesRepresentative(Brew,ImagesRepresentative(BPiso,bhom));
-      end;
-
-      BlPgens:=List(GeneratorsOfGroup(Range(Brew)),
-        x->PreImagesRepresentative(Brew,x));
-      Blgens:=List(BlPgens,x->PreImagesRepresentative(BPiso,x));
-
-      A:=Blgens;
-      Blgens:=[];
-      for a  in A  do
-        imM:=List(a,i->PcElementByExponents(MPcgs,i));
+      autforBP:=function(elm)
+        elm:=PreImagesRepresentative(BPiso,elm);
+        imM:=List(elm,i->PcElementByExponents(MPcgs,i));
         imM:=GroupHomomorphismByImagesNC(Q,Q,Concatenation(MPcgs,gens),Concatenation(imM,gens));
         Assert(2,IsBijective(imM));
-        Add(Blgens,imM);
-      od;
+        return imM;
+      end;
+
+#      CMPB:=ConfluentMonoidPresentationForGroup(BP);
+#      Brew:=CMPB.fphom;
+# unused
+#      Bdecomp:=function(bhom)
+#        # linear action
+#        bhom:=List(MPcgs,x->ExponentsOfPcElement(MPcgs,ImagesRepresentative(bhom,x)))
+#          *One(mo.field);
+#        return ImagesRepresentative(Brew,ImagesRepresentative(BPiso,bhom));
+#      end;
+
+      #BlPgens:=List(GeneratorsOfGroup(Range(Brew)),
+      #  x->PreImagesRepresentative(Brew,x));
+      #Blgens:=List(BlPgens,x->PreImagesRepresentative(BPiso,x));
+
+#      tmp:=Blgens;
+#      Blgens:=[];
+#      for a  in tmp  do
+#        imM:=List(a,i->PcElementByExponents(MPcgs,i));
+#        imM:=GroupHomomorphismByImagesNC(Q,Q,Concatenation(MPcgs,gens),Concatenation(imM,gens));
+#        Assert(2,IsBijective(imM));
+#        Add(Blgens,imM);
+#      od;
 
       # find noninner of B
       innB:=List(SmallGeneratingSet(Zm),z->InnerAutomorphism(Q,z));
@@ -1722,53 +1762,65 @@ local
 
     Info(InfoMorph,2,"Lift Index ",Size(AQP)/Size(sub));
 
-    CMPA:=ConfluentMonoidPresentationForGroup(Aperm);
-    Arew:=CMPA.fphom;
+#    CMPA:=ConfluentMonoidPresentationForGroup(Aperm,[j.radical]);
+# not used
+#    Arew:=CMPA.fphom;
+#    assigner:=function(oldq,oldAQiso)
+#      return function(ahom)
+#        return ImagesRepresentative(Arew,
+#          ImagesRepresentative(oldAQiso,InducedAutomorphism(oldq,ahom)));
+#      end;
+#    end;
+#    Adecomp:=assigner(q,AQiso);
 
-    assigner:=function(oldq,oldAQiso)
-      return function(ahom)
-        return ImagesRepresentative(Arew,
-          ImagesRepresentative(oldAQiso,InducedAutomorphism(oldq,ahom)));
-      end;
-    end;
-    Adecomp:=assigner(q,AQiso);
+#    # letters to permgens
+#    AlPgens:=List(GeneratorsOfGroup(Image(Arew)),x->PreImagesRepresentative(Arew,x));
 
-    # letters to permgens
-    AlPgens:=List(GeneratorsOfGroup(Image(Arew)),x->PreImagesRepresentative(Arew,x));
-
-    # and now to fixed representatives
+    # and now to buildign a mechanism for finding representatives
     Adash:=List(GeneratorsOfGroup(AQI),
         x->PreImagesRepresentative(q,ConjugatorOfConjugatorIsomorphism(x)));
     Adash:=Filtered(Adash,x->not IsOne(x));
     Adash:=List(Adash,x->ConjugatorAutomorphism(Source(q),x));
     Adash:=Concatenation(A,Adash);
-    ind:=List(Adash,x->ImagesRepresentative(AQiso,InducedAutomorphism(q,x)));
 
-    ind:=GroupGeneralMappingByImagesNC(Group(ind),Group(Adash),ind,Adash);
-    Algens:=List(AlPgens,x->ImagesRepresentative(ind,x));
+    ind:=List(Adash,x->ImagesRepresentative(AQiso,InducedAutomorphism(q,x)));
+    Apremap:=GroupGeneralMappingByImagesNC(Group(ind),Group(Adash),ind,Adash);
+
+
+#    Algens:=List(AlPgens,x->ImagesRepresentative(ind,x));
 
     # now combine the presentations into a hybrid one, exposing the radical
     if BP<>fail then
-      rB:=RadicalGroup(BP);
-      rBind:=Filtered([1..Length(BlPgens)],x->BlPgens[x] in rB);
-      Bpcgs:=BlPgens{rBind};
-      Bpcgs:=PcgsByPcSequence(FamilyObj(One(BP)),Bpcgs);
-      if rB<>Subgroup(BP,Bpcgs) then
-        Error("B presentation does not exhibit radical.");
-      fi;
+      rBff:=FittingFreeLiftSetup(BP);
+      Bpcgs:=rBff.pcgs;
+      rB:=rBff.radical;
+
+      Bpcgspre:=List(Bpcgs,autforBP);
+      #rB:=RadicalGroup(BP);
+      #rBind:=Filtered([1..Length(BlPgens)],x->BlPgens[x] in rB);
+      #Bpcgs:=BlPgens{rBind};
+      #Bpcgs:=PcgsByPcSequence(FamilyObj(One(BP)),Bpcgs);
+      #if rB<>Subgroup(BP,Bpcgs) then
+      #  Error("B presentation does not exhibit radical.");
+      #fi;
     fi;
 
-    rA:=RadicalGroup(Aperm);
-    rAind:=Filtered([1..Length(AlPgens)],x->AlPgens[x] in rA);
-    Apcgs:=AlPgens{rAind};
-    if rA<>Subgroup(Aperm,Apcgs) then
-      Error("A presentation does not exhibit radical.");
-    fi;
-    Apcgs:=PcgsByPcSequence(FamilyObj(One(Aperm)),Apcgs);
-    radpcgs:=Algens{rAind};
+#    rA:=RadicalGroup(Aperm);
+#    rAind:=Filtered([1..Length(AlPgens)],x->AlPgens[x] in rA);
+#    Apcgs:=AlPgens{rAind};
+#    if rA<>Subgroup(Aperm,Apcgs) then
+#      Error("A presentation does not exhibit radical.");
+#    fi;
+#    Apcgs:=PcgsByPcSequence(FamilyObj(One(Aperm)),Apcgs);
+
+    Aff:=FittingFreeLiftSetup(Aperm);
+    Apcgs:=Aff.pcgs; # might be nicer one
+    Apcgspre:=List(Apcgs,x->ImagesRepresentative(Apremap,x));
+    radpcgs:=ShallowCopy(Apcgspre);
     relo:=ShallowCopy(RelativeOrders(Apcgs));
+
     if BP<>fail then
-      radpcgs:=Concatenation(radpcgs,Blgens{rBind});
+      radpcgs:=Concatenation(radpcgs,Bpcgspre);
       Append(relo,RelativeOrders(Bpcgs));
     fi;
     Append(radpcgs,CBasis);
@@ -1778,11 +1830,11 @@ local
     assigner:=function(oldq,oldAQiso)
       return function(elm)
       local a,e;
-        if Length(rAind)>0 then
+        if Length(Apcgspre)>0 then
           a:=InducedAutomorphism(oldq,elm);
           a:=ImagesRepresentative(oldAQiso,a);
           e:=ExponentsOfPcElement(Apcgs,a);
-          d:=LinearCombinationPcgs(Algens{rAind},e);
+          d:=LinearCombinationPcgs(Apcgspre,e);
           elm:=LeftQuotient(d,elm);
         else
           e:=[];
@@ -1793,7 +1845,7 @@ local
           d:=ImagesRepresentative(BPiso,d);
           d:=ExponentsOfPcElement(Bpcgs,d);
           Append(e,d);
-          d:=LinearCombinationPcgs(Blgens{rBind},d);
+          d:=LinearCombinationPcgs(Bpcgspre,d);
           elm:=LeftQuotient(d,elm);
         fi;
         d:=List(Cdecomp(elm),Int);
@@ -1802,9 +1854,105 @@ local
       end;
     end;
 
+    # this function will decompose pc elements.
     radecomp:=assigner(q,AQiso);
 
-    #Error("HaveA");
+    # now build the radical factor. That is the action on the radical factor
+    # socle
+    # of BP, subdirect with A/rad A
+
+    if BP<>fail and not IsSolvableGroup(BP) then
+      # B-action
+      bprfhom:=rBff.factorhom;
+      Bsoc:=Socle(Image(bprfhom));
+      BsocG:=GeneratorsOfGroup(Bsoc);
+      # induced automorphisms
+      Bauts:=List(GeneratorsOfGroup(BP),x->ConjugatorAutomorphism(Bsoc,ImagesRepresentative(bprfhom,x)));
+
+      # now the action of A/Rad(A) on the same
+      if Size(Aff.radical)>1 then
+        Arf:=Range(Aff.factorhom);
+        afgens:=GeneratorsOfGroup(Arf);
+        Amogens:=List(afgens,x->PreImagesRepresentative(Aff.factorhom,x));
+      else
+        Arf:=Source(Apremap);
+        Amogens:=MappingGeneratorsImages(Apremap)[1];
+        afgens:=Amogens;
+      fi;
+
+      Amogens:=List(Amogens,x->
+        ImagesRepresentative(Apremap,x));
+      Amogens:=List(Amogens,a->List(MPcgs,x->ExponentsOfPcElement(MPcgs,
+        ImagesRepresentative(a,x)))*One(mo.field));
+      Amogens:=List(Amogens,x->ImmutableMatrix(mo.field,x));
+      Bsocpre:=List(BsocG,x->PreImagesRepresentative(BPiso,
+        PreImagesRepresentative(bprfhom,x)));
+      Asoc:=List(Amogens,a->List(Bsocpre,x->ImagesRepresentative(bprfhom,
+        ImagesRepresentative(BPiso,x^a))));
+      Asoc:=List(Asoc,x->GroupHomomorphismByImages(Bsoc,Bsoc,BsocG,x));
+
+      ARG:=AutomorphismRepresentingGroup(Bsoc,Concatenation(Asoc,Bauts));
+
+      # now form the direct product of the radical factors
+      DP:=DirectProduct(ARG[1],Arf);
+      # B-generators, images of GeneratorsOfGroup(BP). Only act on B-part
+      Bactims:=ARG[3]{[Length(Asoc)+1..Length(ARG[3])]};
+      Bims:=List(Bactims,x->ImagesRepresentative(Embedding(DP,1),x));
+      # A generators, need to act on both parts
+      Aims:=List([1..Length(Asoc)],x->
+        ImagesRepresentative(Embedding(DP,1),ARG[3][x])*
+          ImagesRepresentative(Embedding(DP,2),
+            afgens[x]));
+
+      # subdirect product
+      sdp:=Group(Concatenation(Aims,Bims));
+      sdKB:=Stabilizer(sdp,MovedPoints(Bims),OnTuples);
+      sdKA:=Stabilizer(sdp,Difference(MovedPoints(sdp),MovedPoints(Bims)),
+        OnTuples);
+
+      # new presentation that fits the sdp structure
+      # so we need to consider subgroups above the socle
+
+      bidx:=[sdKB,sdKA,ClosureGroup(sdKA,sdKB)];
+      bidx:=Filtered(bidx,x->IsSubset(x,Socle(sdp)));
+      CMPA:=ConfluentMonoidPresentationForGroup(sdp,bidx);
+
+      # identify generators that come from B and those that come from A
+      sdpgens:=List(GeneratorsOfGroup(Range(CMPA.fphom)),x->
+        PreImagesRepresentative(CMPA.fphom,x));
+      bidx:=Filtered([1..Length(sdpgens)],x->sdpgens[x] in sdKA); # the B-ones
+      aidx:=Difference([1..Length(sdpgens)],bidx);
+
+      # find automorphisms that represent b-generators
+      bgauts:=List(sdpgens{bidx},x->PreImagesRepresentative(Embedding(DP,1),x));
+      premap:=GroupHomomorphismByImagesNC(BP,Group(Bactims),
+        GeneratorsOfGroup(BP),Bactims);
+      bgauts:=List(bgauts,x->PreImagesRepresentative(premap,x));
+      List(bgauts,autforBP);
+
+      # find automorphisms that represent a-generators
+      # since a is on top we can project
+
+      agauts:=List(sdpgens{aidx},x->ImagesRepresentative(Projection(DP,2),x));
+      agauts:=List(agauts,x->ImagesRepresentative(Apremap,
+         PreImagesRepresentative(Aff.factorhom,x)));
+      autslets:=[];
+      autslets{aidx}:=agauts;
+      autslets{bidx}:=bgauts;
+
+    else
+      # no B, so we can just do A
+      Arf:=Image(Aff.factorhom);
+      CMPA:=ConfluentMonoidPresentationForGroup(Arf);
+      # letter gens
+      agauts:=List(GeneratorsOfGroup(Range(CMPA.fphom)),
+        x->PreImagesRepresentative(CMPA.fphom,x));
+      agauts:=List(agauts,x->PreImagesRepresentative(Aff.factorhom,x));
+      autslets:=List(agauts,x->ImagesRepresentative(Apremap,x));
+
+    fi;
+
+    #Error("Q");
 
     # now make the new automorphism group
     innB:=List(SmallGeneratingSet(Q),x->InnerAutomorphism(Q,x));
