@@ -961,6 +961,9 @@ end);
 # main automorphism method -- currently still using factor groups, but
 # nevertheless faster..
 
+
+DOHYB:=false; # unless we turn it on
+
 # option somechar may be a list of characteristic subgroups, or a record with
 # component subgroups, orbits
 BindGlobal("AutomGrpSR",function(G)
@@ -1532,8 +1535,9 @@ local
 
     if split then
       gens:=GeneratorsOfGroup(ocr.complement);
-
       maut:=MTX.ModuleAutomorphisms(mo);
+
+if DOHYB then
 
       BPiso:=IsomorphismPermGroup(maut);
       BP:=Image(BPiso);
@@ -1544,29 +1548,7 @@ local
         Assert(2,IsBijective(imM));
         return imM;
       end;
-
-#      CMPB:=ConfluentMonoidPresentationForGroup(BP);
-#      Brew:=CMPB.fphom;
-# unused
-#      Bdecomp:=function(bhom)
-#        # linear action
-#        bhom:=List(MPcgs,x->ExponentsOfPcElement(MPcgs,ImagesRepresentative(bhom,x)))
-#          *One(mo.field);
-#        return ImagesRepresentative(Brew,ImagesRepresentative(BPiso,bhom));
-#      end;
-
-      #BlPgens:=List(GeneratorsOfGroup(Range(Brew)),
-      #  x->PreImagesRepresentative(Brew,x));
-      #Blgens:=List(BlPgens,x->PreImagesRepresentative(BPiso,x));
-
-#      tmp:=Blgens;
-#      Blgens:=[];
-#      for a  in tmp  do
-#        imM:=List(a,i->PcElementByExponents(MPcgs,i));
-#        imM:=GroupHomomorphismByImagesNC(Q,Q,Concatenation(MPcgs,gens),Concatenation(imM,gens));
-#        Assert(2,IsBijective(imM));
-#        Add(Blgens,imM);
-#      od;
+fi;
 
       # find noninner of B
       innB:=List(SmallGeneratingSet(Zm),z->InnerAutomorphism(Q,z));
@@ -1714,6 +1696,9 @@ local
       nosuf:=List(nosucl,x->Set(List(x,y->Image(lhom,y))));
       nosuf:=Filtered(nosuf,x->Size(x[1])>1 and Size(x[1])<Size(OQ));
       SortBy(nosuf,Length);
+      if Size(sub)>10^6 then
+        Error("BIGGIE");
+      fi;
       for j in nosuf do
         # stabilize class
         k:=SmallGeneratingSet(sub);
@@ -1762,20 +1747,7 @@ local
 
     Info(InfoMorph,2,"Lift Index ",Size(AQP)/Size(sub));
 
-#    CMPA:=ConfluentMonoidPresentationForGroup(Aperm,[j.radical]);
-# not used
-#    Arew:=CMPA.fphom;
-#    assigner:=function(oldq,oldAQiso)
-#      return function(ahom)
-#        return ImagesRepresentative(Arew,
-#          ImagesRepresentative(oldAQiso,InducedAutomorphism(oldq,ahom)));
-#      end;
-#    end;
-#    Adecomp:=assigner(q,AQiso);
-
-#    # letters to permgens
-#    AlPgens:=List(GeneratorsOfGroup(Image(Arew)),x->PreImagesRepresentative(Arew,x));
-
+if DOHYB then
     # and now to buildign a mechanism for finding representatives
     Adash:=List(GeneratorsOfGroup(AQI),
         x->PreImagesRepresentative(q,ConjugatorOfConjugatorIsomorphism(x)));
@@ -1952,7 +1924,7 @@ local
 
     fi;
 
-    #Error("Q");
+fi;
 
     # now make the new automorphism group
     innB:=List(SmallGeneratingSet(Q),x->InnerAutomorphism(Q,x));
