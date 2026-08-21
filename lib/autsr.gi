@@ -2510,7 +2510,7 @@ local
   iso,             # NOTE: two roles -- the isomorphism from a recursive
                    # call, and later a flag for whether the permutation
                    # representation has been built
-  areduce,
+  makenewa,
   origa,
   # -- loop counters --
   i,               # NOTE: two roles -- a loop index, and an
@@ -2614,30 +2614,34 @@ local
     delaypermrep:=true );
 
   origa:=a;
-  areduce:=function()
+  makenewa:=function(makesmall)
   local map,as;
     if not HasIsomorphismPermGroup(origa) then
       origa!.makeaqiso();
     fi;
     map:=IsomorphismPermGroup(origa);
-    as:=SmallGeneratingSet(Image(map,a));
-    if Length(as)>=Length(GeneratorsOfGroup(a)) then return;fi;
-    as:=List(as,x->PreImagesRepresentative(map,x));
-    Info(InfoMorph,1,"Genreduction:",Length(GeneratorsOfGroup(a)),
-      "=>",Length(as));
-    a:=SubgroupNC(Parent(a),as);
+    if makesmall then
+      as:=SmallGeneratingSet(Image(map,a));
+      if Length(as)<Length(GeneratorsOfGroup(a)) then
+        as:=List(as,x->PreImagesRepresentative(map,x));
+        Info(InfoMorph,1,"Genreduction:",Length(GeneratorsOfGroup(a)),
+          "=>",Length(as));
+        a:=SubgroupNC(Parent(a),as);
+      fi;
+    fi;
     SetIsGroupOfAutomorphismsFiniteGroup(a,true);
     SetNiceMonomorphism(a,map);
+    SetIsomorphismPermGroup(a,map);
   end;
 
 
   for i in cG do
     if not ForAll(GeneratorsOfGroup(a),x->Image(x,i)=i) then
-      if Length(GeneratorsOfGroup(a))>12 then areduce();fi;
+      makenewa(Length(GeneratorsOfGroup(a))>12);
       a:=Stabilizer(a,i,AsAutomorphism);
     fi;
   od;
-  if Length(GeneratorsOfGroup(a))>12 then areduce();fi;
+  makenewa(Length(GeneratorsOfGroup(a))>12);
 
   iso:=fail;
 
@@ -2668,7 +2672,7 @@ local
         if iso<>fail then
           map:=fail;
         else
-          if Length(GeneratorsOfGroup(a))>8 then areduce();fi;
+          makenewa(Length(GeneratorsOfGroup(a))>8);
           map:=AGBoundedOrbrep(a,u,v,AsAutomorphism,200);
         fi;
         if map=false then
@@ -2677,6 +2681,7 @@ local
         elif map<>fail then
           Info(InfoMorph,1,"Shortorb factor reduce ",map.orblen);
           a:=SubgroupNC(Parent(a),map.stabgens);
+          makenewa(Length(GeneratorsOfGroup(a))>8);
           map:=map.rep;
           conj:=conj*map;
           K:=Image(map,K);
@@ -2684,7 +2689,8 @@ local
         else
           if iso=fail then
             Info(InfoMorph,1,"Shortorb failed, get delayed permrep");
-            areduce();
+            makenewa(Length(GeneratorsOfGroup(a))>8);
+  if not HasIsomorphismPermGroup(a) then Error("WW");fi;
             iso:=IsomorphismPermGroup(a:autactbase:=aab);
             api:=Image(iso,a);
           fi;
