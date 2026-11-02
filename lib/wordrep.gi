@@ -236,12 +236,12 @@ local a,t,
       if j<Length(l) or l[Length(l)]>0 then
         # write as conjugate
 
-        str:=DoNSAW(l{[i+1..j-1]},names,tseed);
+        str:=DoNSAW(l{[i+1..j-1]},names,tseed,n);
         if i+2<j or l[i+1]<0 then
           # multiple symbols or inverse, need parentheses
           str:=Concatenation("(",str,")");
         fi;
-        a:=DoNSAW(l{[j..Length(l)]},names,tseed);
+        a:=DoNSAW(l{[j..Length(l)]},names,tseed,n);
         if j<Length(l) or l[Length(l)]<0 then
           # multiple symbols or inverse , need parentheses
           a:=Concatenation("(",a,")");
