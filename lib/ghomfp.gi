@@ -23,12 +23,17 @@ InstallMethod( ImagesRepresentative,
   FamSourceEqFamElm, [ IsFromFpGroupStdGensGeneralMappingByImages,
           IsMultiplicativeElementWithInverse ], 0,
 function( hom, elm )
-local mapi;
+local mapi,fam,inv;
   if IsBound(hom!.mapgeninv) then
     mapi:=hom!.mapgeninv;
   else
     mapi:=List(MappingGeneratorsImages(hom),ShallowCopy);
-    Append(mapi[1],List(mapi[1],Inverse));
+    # this is inversion of the letters to avoid triggering reduction
+    # if reduction is turned on
+    fam:=FamilyObj(mapi[1][1]);
+    inv:=List(mapi[1],x->Inverse(UnderlyingElement(x)));
+    inv:=List(inv,x->ElementOfFpGroup(fam,x));
+    Append(mapi[1],inv);
     Append(mapi[2],List(mapi[2],Inverse));
     hom!.mapgeninv:=mapi;
   fi;
