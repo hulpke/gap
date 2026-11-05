@@ -1153,7 +1153,7 @@ InstallOtherMethod( Value,"Laurent, ring element, and mult. neutral element",
 function( f, x, one )
 local val, i,e,fa;
   # is the polynomial of larger degree? Should we try factoring?
-  if DegreeOfLaurentPolynomial(f)>100 then
+  if DegreeOfLaurentPolynomial(f)>100 and ValueOption("infactor")<>true then
     fa:=Factors(f);
     if Length(fa)>1 then
       return Product(List(Collected(fa),y->Value(y[1],x,one)^y[2]),one);
