@@ -24,7 +24,14 @@ InstallMethod( ImagesRepresentative,
           IsMultiplicativeElementWithInverse ], 0,
 function( hom, elm )
 local mapi;
-  mapi:=MappingGeneratorsImages(hom);
+  if IsBound(hom!.mapgeninv) then
+    mapi:=hom!.mapgeninv;
+  else
+    mapi:=List(MappingGeneratorsImages(hom),ShallowCopy);
+    Append(mapi[1],List(mapi[1],Inverse));
+    Append(mapi[2],List(mapi[2],Inverse));
+    hom!.mapgeninv:=mapi;
+  fi;
   return MappedWord(elm,mapi[1],mapi[2]);
 end);
 
