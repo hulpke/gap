@@ -5225,7 +5225,7 @@ local iso,k,id,f,ran,g;
     if iso<>fail and Size(Image(iso))<50000 then
       k:=ImagesSource(iso);
       return w->UnderlyingElement(Factorization(k,
-        Image(iso,ElementOfFpGroup(fam,w))));
+        ImagesRepresentative(iso,ElementOfFpGroup(fam,w))));
     fi;
   fi;
 
